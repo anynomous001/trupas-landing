@@ -5,7 +5,6 @@ import { z } from 'zod';
 import {
   X,
   Mail,
-  Lock,
   Eye,
   EyeOff,
   AtSign,
@@ -56,7 +55,6 @@ export const ChangeEmailModal = ({
     handleSubmit,
     formState: { errors },
     reset,
-    watch,
   } = useForm<ChangeEmailStep1FormData>({
     resolver: zodResolver(changeEmailStep1Schema),
   });

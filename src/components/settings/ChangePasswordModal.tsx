@@ -13,7 +13,6 @@ import {
   Lock as LockIcon,
   CheckCircle2,
   LogIn,
-  Mail,
 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -75,12 +74,11 @@ export const ChangePasswordModal = ({
     handleSubmit,
     formState: { errors },
     reset,
-    watch,
   } = useForm<ChangePasswordStep1FormData>({
     resolver: zodResolver(changePasswordStep1Schema),
   });
 
-  const newPasswordValue = watch('newPassword');
+  // const newPasswordValue = watch('newPassword'); // Strength indicator could use this later
 
   const handleClose = () => {
     setStep(1);
@@ -92,7 +90,7 @@ export const ChangePasswordModal = ({
     onClose();
   };
 
-  const handleStep1Submit = (data: ChangePasswordStep1FormData) => {
+  const handleStep1Submit = () => {
     // Simulate API call to send OTP to email
     setTimeout(() => {
       setStep(2);
@@ -267,6 +265,7 @@ export const ChangePasswordModal = ({
                   <span className="text-red-500 ml-1">*</span>
                 </label>
                 <PasswordInput
+                  label="New Password"
                   placeholder="Enter your new password"
                   {...register('newPassword')}
                   error={errors.newPassword?.message}
@@ -280,6 +279,7 @@ export const ChangePasswordModal = ({
                   <span className="text-red-500 ml-1">*</span>
                 </label>
                 <PasswordInput
+                  label="Confirm Password"
                   placeholder="Confirm your new password"
                   {...register('confirmPassword')}
                   error={errors.confirmPassword?.message}

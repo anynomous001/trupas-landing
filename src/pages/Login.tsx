@@ -64,12 +64,6 @@ export const Login = (): JSX.Element => {
             </div>
             <h1 className="text-2xl font-bold text-text-primary">TruePas</h1>
           </div>
-          <Link
-            to={ROUTES.ONBOARDING.ACCOUNT_DETAILS}
-            className="text-sm text-text-secondary hover:text-text-primary"
-          >
-            New to TruePas? <span className="text-primary font-semibold">Sign Up</span>
-          </Link>
         </div>
 
         {/* Login Form */}

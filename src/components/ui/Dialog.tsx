@@ -1,6 +1,5 @@
 import { ReactNode } from 'react';
 import { X } from 'lucide-react';
-import { Button } from './Button';
 import { Card } from './Card';
 import { cn } from '../../lib/utils';
 

@@ -3,9 +3,6 @@ import { Landing } from '../pages/Landing';
 import { Login } from '../pages/Login';
 import { ForgotPassword } from '../pages/ForgotPassword';
 import { ResetPassword } from '../pages/ResetPassword';
-import { AccountDetails } from '../pages/onboarding/AccountDetails';
-import { Verification } from '../pages/onboarding/Verification';
-import { TaxValidation } from '../pages/onboarding/TaxValidation';
 import { Dashboard } from '../pages/Dashboard';
 import { Locations } from '../pages/Locations';
 import { LocationDetails } from '../pages/LocationDetails';
@@ -20,7 +17,6 @@ import { GettingStartedArticle } from '../pages/documentation/GettingStartedArti
 import { FAQ } from '../pages/FAQ';
 import { ROUTES } from '../config/routes';
 import { useAuthStore } from '../stores/authStore';
-import { useOnboardingStore } from '../stores/onboardingStore';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -38,32 +34,6 @@ const GuestRoute = ({ children }: { children: React.ReactNode }) => {
     return <Navigate to={ROUTES.DASHBOARD} replace />;
   }
   return <>{children}</>;
-};
-
-// Onboarding guards
-const RequireVerification = () => {
-  const accountDetails = useOnboardingStore((state) => state.accountDetails);
-
-  if (!accountDetails) {
-    return <Navigate to={ROUTES.ONBOARDING.ACCOUNT_DETAILS} replace />;
-  }
-
-  return <Verification />;
-};
-
-const RequireTaxValidation = () => {
-  const accountDetails = useOnboardingStore((state) => state.accountDetails);
-  const verification = useOnboardingStore((state) => state.verification);
-
-  if (!accountDetails) {
-    return <Navigate to={ROUTES.ONBOARDING.ACCOUNT_DETAILS} replace />;
-  }
-
-  if (!verification.emailVerified || !verification.phoneVerified) {
-    return <Navigate to={ROUTES.ONBOARDING.VERIFICATION} replace />;
-  }
-
-  return <TaxValidation />;
 };
 
 export const router = createBrowserRouter([
@@ -190,22 +160,6 @@ export const router = createBrowserRouter([
         <FAQ />
       </ProtectedRoute>
     ),
-  },
-  {
-    path: ROUTES.ONBOARDING.ROOT,
-    element: <Navigate to={ROUTES.ONBOARDING.ACCOUNT_DETAILS} replace />,
-  },
-  {
-    path: ROUTES.ONBOARDING.ACCOUNT_DETAILS,
-    element: <AccountDetails />,
-  },
-  {
-    path: ROUTES.ONBOARDING.VERIFICATION,
-    element: <RequireVerification />,
-  },
-  {
-    path: ROUTES.ONBOARDING.TAX_VALIDATION,
-    element: <RequireTaxValidation />,
   },
 ]);
 

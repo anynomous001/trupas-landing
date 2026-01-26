@@ -55,11 +55,7 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps): JSX.Element
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
-<<<<<<< HEAD
 
-=======
-
->>>>>>> origin/feature-team
   const toggleSidebar = () => {
     setIsCollapsed(!isCollapsed);
   };

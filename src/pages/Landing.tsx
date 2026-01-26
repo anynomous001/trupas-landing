@@ -22,17 +22,11 @@ export const Landing = (): JSX.Element => {
             Welcome to TruePas Merchant Portal
           </h2>
           <p className="text-xl text-text-secondary">
-            Streamline your business onboarding process with our secure and efficient merchant portal.
-            Get started in minutes, not days.
+            Manage your merchant account, locations, and team members with our secure and efficient portal.
           </p>
           <div className="flex gap-4 justify-center">
-            <Link to={ROUTES.ONBOARDING.ACCOUNT_DETAILS}>
-              <Button size="lg">Get Started</Button>
-            </Link>
             <Link to={ROUTES.LOGIN}>
-              <Button variant="outline" size="lg">
-                Sign In
-              </Button>
+              <Button size="lg">Sign In to Dashboard</Button>
             </Link>
           </div>
         </div>

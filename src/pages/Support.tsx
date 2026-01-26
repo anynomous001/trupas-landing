@@ -17,7 +17,6 @@ import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
 import { DashboardLayout } from '../components/layout/DashboardLayout';
 import { ROUTES } from '../config/routes';
-import { cn } from '../lib/utils';
 
 interface PopularArticle {
   id: string;

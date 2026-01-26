@@ -15,11 +15,5 @@ export const ROUTES = {
   DOCUMENTATION: '/documentation',
   GETTING_STARTED_ARTICLE: '/documentation/getting-started/first-terminal-setup',
   FAQ: '/faq',
-  ONBOARDING: {
-    ROOT: '/onboarding',
-    ACCOUNT_DETAILS: '/onboarding/account-details',
-    VERIFICATION: '/onboarding/verification',
-    TAX_VALIDATION: '/onboarding/tax-validation',
-  },
 } as const;
 

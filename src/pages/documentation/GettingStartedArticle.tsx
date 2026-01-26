@@ -15,7 +15,6 @@ import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { DashboardLayout } from '../../components/layout/DashboardLayout';
 import { ROUTES } from '../../config/routes';
-import { cn } from '../../lib/utils';
 
 interface CodeBlockProps {
   language: string;
@@ -155,7 +154,7 @@ const client = new TruePas({
               Navigate to the "Terminals" section in your dashboard to find your Terminal ID. You
               can view all active terminals on an interactive map for easy management.
             </p>
-            
+
             {/* Image Placeholder */}
             <Card className="bg-background border-border p-8">
               <div className="space-y-4">

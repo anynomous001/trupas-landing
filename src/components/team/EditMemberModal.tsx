@@ -9,7 +9,6 @@ import {
   ChevronDown,
   Loader2,
   Pencil,
-  Upload,
 } from 'lucide-react';
 import { Dialog } from '../ui/Dialog';
 import { Button } from '../ui/Button';
@@ -70,7 +69,6 @@ export const EditMemberModal = ({
   const [locationInput, setLocationInput] = useState('');
   const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const locationInputRef = useRef<HTMLInputElement>(null);
   const roleDropdownRef = useRef<HTMLDivElement>(null);
@@ -162,7 +160,6 @@ export const EditMemberModal = ({
         alert('File size must be less than 2MB');
         return;
       }
-      setAvatarFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
         setAvatarPreview(reader.result as string);
@@ -185,7 +182,6 @@ export const EditMemberModal = ({
       reset();
       setLocations(member.locations || []);
       setLocationInput('');
-      setAvatarFile(null);
       setAvatarPreview(null);
       setIsRoleDropdownOpen(false);
       onClose();
