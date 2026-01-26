@@ -18,7 +18,7 @@ import { InviteMemberModal } from '../components/team/InviteMemberModal';
 import { InviteSuccessModal } from '../components/team/InviteSuccessModal';
 import { ROUTES } from '../config/routes';
 import { cn } from '../lib/utils';
-import { useAuthStore } from '../stores/authStore';
+import { api } from '../lib/api';
 
 type TabType = 'core' | 'staffs' | 'pending';
 
@@ -51,6 +51,35 @@ export const TeamManagement = (): JSX.Element => {
     locations: string[];
   } | null>(null);
 
+  const [members, setMembers] = useState<TeamMember[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchMembers = async () => {
+      setIsLoading(true);
+      try {
+        const response = await api.get<any>('/team/members');
+        if (response.success && response.data.members) {
+          const fetchedMembers: TeamMember[] = response.data.members.map((m: any) => ({
+            id: m.memberId,
+            name: `${m.firstName} ${m.lastName}`,
+            email: m.email,
+            role: m.role?.roleName || 'Staff',
+            locations: m.locations || (m.role?.roleSlug === 'root_user' ? ['Global Access'] : ['Branch A']),
+            avatar: `${m.firstName.charAt(0)}${m.lastName.charAt(0)}`,
+          }));
+          setMembers(fetchedMembers);
+        }
+      } catch (error) {
+        console.error('Failed to fetch members:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchMembers();
+  }, []);
+
   // Check for invite trigger from URL
   useEffect(() => {
     if (searchParams.get('invite') === 'true') {
@@ -80,61 +109,13 @@ export const TeamManagement = (): JSX.Element => {
     },
   ]);
 
-  const user = useAuthStore((state) => state.user);
+  const coreMembers = members.filter(
+    (m) => m.role === 'Root User' || m.role === 'Admin' || m.role === 'Manager' || m.role === 'Administrator'
+  );
 
-  const coreMembers: TeamMember[] = [
-    {
-      id: '1',
-      name: 'Marcus Chen',
-      email: 'marcus.chen@truepas.com',
-      role: 'Admin',
-      locations: ['HQ - New York', 'London Branch'],
-      avatar: 'MC',
-    },
-    {
-      id: '2',
-      name: 'Sarah Miller',
-      email: 'sarah.m@truepas.com',
-      role: 'Manager',
-      locations: ['West Coast Region'],
-      avatar: 'SM',
-    },
-    {
-      id: '3',
-      name: 'Elena Lou',
-      email: 'elena.lou@truepas.com',
-      role: 'Admin',
-      locations: ['Singapore Office', 'Jakarta'],
-      initials: 'EL',
-    },
-    {
-      id: user?.member_id || 'root',
-      name: user ? `${user.first_name} ${user.last_name}` : 'Michael Ross',
-      email: user?.email || 'michael.r@truepas.com',
-      role: user?.role?.role_name || 'Root User',
-      locations: ['Global Access'],
-      avatar: user ? `${user.first_name.charAt(0)}${user.last_name.charAt(0)}` : 'MR',
-    },
-  ];
-
-  const staffs: TeamMember[] = [
-    {
-      id: '5',
-      name: 'David Kim',
-      email: 'david.k@truepas.com',
-      role: 'Staff',
-      locations: ['Warehouse A'],
-      avatar: 'DK',
-    },
-    {
-      id: '6',
-      name: 'Jessica Pearson',
-      email: 'j.pearson@truepas.com',
-      role: 'Staff',
-      locations: ['Warehouse B'],
-      avatar: 'JP',
-    },
-  ];
+  const staffs = members.filter(
+    (m) => m.role === 'Staff' || m.role === 'Operator'
+  );
 
   const handleInviteMember = (data: {
     email: string;
@@ -181,11 +162,15 @@ export const TeamManagement = (): JSX.Element => {
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
       case 'Admin':
+      case 'Administrator':
         return 'bg-purple-500/20 text-purple-500 border-purple-500/50';
       case 'Manager':
         return 'bg-blue-500/20 text-blue-500 border-blue-500/50';
       case 'Staff':
+      case 'Operator':
         return 'bg-gray-500/20 text-gray-500 border-gray-500/50';
+      case 'Root User':
+        return 'bg-red-500/20 text-red-500 border-red-500/50';
       default:
         return 'bg-gray-500/20 text-gray-500 border-gray-500/50';
     }
@@ -305,196 +290,205 @@ export const TeamManagement = (): JSX.Element => {
 
           {/* Content Sections */}
           <div className="space-y-8">
-            {/* Core Members Section */}
-            {activeTab === 'core' && (
-              <div>
-                <div className="flex items-center gap-3 mb-4">
-                  <h3 className="text-lg font-semibold text-text-primary">Core Members</h3>
-                  <span className="px-2 py-1 rounded-full bg-card text-xs text-text-secondary border border-border">
-                    Managers, Admins
-                  </span>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {filteredCoreMembers.map((member) => (
-                    <Link
-                      key={member.id}
-                      to={`${ROUTES.TEAM_MANAGEMENT}/${member.id}`}
-                      className="block"
-                    >
-                      <Card className="relative cursor-pointer hover:border-primary/50 transition-colors">
-                        <button
-                          className="absolute top-4 right-4 p-1 text-text-secondary hover:text-text-primary z-10"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            // Handle more options click
-                          }}
+            {isLoading ? (
+              <div className="flex flex-col items-center justify-center py-20 gap-4">
+                <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                <p className="text-text-secondary font-medium anim-pulse">Loading team members...</p>
+              </div>
+            ) : (
+              <>
+                {/* Core Members Section */}
+                {activeTab === 'core' && (
+                  <div>
+                    <div className="flex items-center gap-3 mb-4">
+                      <h3 className="text-lg font-semibold text-text-primary">Core Members</h3>
+                      <span className="px-2 py-1 rounded-full bg-card text-xs text-text-secondary border border-border">
+                        Managers, Admins
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                      {filteredCoreMembers.map((member) => (
+                        <Link
+                          key={member.id}
+                          to={`${ROUTES.TEAM_MANAGEMENT}/${member.id}`}
+                          className="block"
                         >
-                          <MoreVertical size={18} />
-                        </button>
-                        <div className="space-y-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center text-white font-semibold">
-                              {member.avatar || member.initials || member.name.charAt(0)}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-text-primary truncate">
-                                {member.name}
-                              </p>
-                              <p className="text-xs text-text-secondary truncate">{member.email}</p>
-                            </div>
-                          </div>
-                          <div>
-                            <span
-                              className={cn(
-                                'inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border',
-                                getRoleBadgeColor(member.role)
-                              )}
+                          <Card className="relative cursor-pointer hover:border-primary/50 transition-colors">
+                            <button
+                              className="absolute top-4 right-4 p-1 text-text-secondary hover:text-text-primary z-10"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                // Handle more options click
+                              }}
                             >
-                              {member.role}
-                            </span>
-                          </div>
-                          <div className="space-y-1">
-                            <p className="text-xs font-semibold text-text-secondary uppercase">
-                              Assigned Locations
-                            </p>
-                            <div className="flex flex-wrap gap-1">
-                              {member.locations.map((location, index) => (
+                              <MoreVertical size={18} />
+                            </button>
+                            <div className="space-y-4">
+                              <div className="flex items-center gap-3">
+                                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center text-white font-semibold">
+                                  {member.avatar || member.initials || member.name.charAt(0)}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-text-primary truncate">
+                                    {member.name}
+                                  </p>
+                                  <p className="text-xs text-text-secondary truncate">{member.email}</p>
+                                </div>
+                              </div>
+                              <div>
                                 <span
-                                  key={index}
-                                  className="text-xs text-text-secondary bg-card px-2 py-1 rounded border border-border"
+                                  className={cn(
+                                    'inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border',
+                                    getRoleBadgeColor(member.role)
+                                  )}
                                 >
-                                  {location}
+                                  {member.role}
                                 </span>
-                              ))}
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-xs font-semibold text-text-secondary uppercase">
+                                  Assigned Locations
+                                </p>
+                                <div className="flex flex-wrap gap-1">
+                                  {member.locations.map((location, index) => (
+                                    <span
+                                      key={index}
+                                      className="text-xs text-text-secondary bg-card px-2 py-1 rounded border border-border"
+                                    >
+                                      {location}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                        </div>
-                      </Card>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
+                          </Card>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
-            {/* Staffs Section */}
-            {activeTab === 'staffs' && (
-              <div>
-                <div className="flex items-center gap-3 mb-4">
-                  <h3 className="text-lg font-semibold text-text-primary">Staffs</h3>
-                  <span className="px-2 py-1 rounded-full bg-card text-xs text-text-secondary border border-border">
-                    General Access
-                  </span>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {filteredStaffs.map((staff) => (
-                    <Link
-                      key={staff.id}
-                      to={`${ROUTES.TEAM_MANAGEMENT}/${staff.id}`}
-                      className="block"
-                    >
-                      <Card className="relative cursor-pointer hover:border-primary/50 transition-colors">
-                        <button
-                          className="absolute top-4 right-4 p-1 text-text-secondary hover:text-text-primary z-10"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            // Handle more options click
-                          }}
+                {/* Staffs Section */}
+                {activeTab === 'staffs' && (
+                  <div>
+                    <div className="flex items-center gap-3 mb-4">
+                      <h3 className="text-lg font-semibold text-text-primary">Staffs</h3>
+                      <span className="px-2 py-1 rounded-full bg-card text-xs text-text-secondary border border-border">
+                        General Access
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                      {filteredStaffs.map((staff) => (
+                        <Link
+                          key={staff.id}
+                          to={`${ROUTES.TEAM_MANAGEMENT}/${staff.id}`}
+                          className="block"
                         >
-                          <MoreVertical size={18} />
-                        </button>
-                        <div className="space-y-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-semibold">
-                              {staff.avatar || staff.initials || staff.name.charAt(0)}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-text-primary truncate">
-                                {staff.name}
-                              </p>
-                              <p className="text-xs text-text-secondary truncate">{staff.email}</p>
-                            </div>
-                          </div>
-                          <div>
-                            <span
-                              className={cn(
-                                'inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border',
-                                getRoleBadgeColor(staff.role)
-                              )}
+                          <Card className="relative cursor-pointer hover:border-primary/50 transition-colors">
+                            <button
+                              className="absolute top-4 right-4 p-1 text-text-secondary hover:text-text-primary z-10"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                // Handle more options click
+                              }}
                             >
-                              {staff.role}
-                            </span>
-                          </div>
-                          <div className="space-y-1">
-                            <p className="text-xs font-semibold text-text-secondary uppercase">
-                              Assigned Locations
-                            </p>
-                            <div className="flex flex-wrap gap-1">
-                              {staff.locations.map((location, index) => (
+                              <MoreVertical size={18} />
+                            </button>
+                            <div className="space-y-4">
+                              <div className="flex items-center gap-3">
+                                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-semibold">
+                                  {staff.avatar || staff.initials || staff.name.charAt(0)}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-text-primary truncate">
+                                    {staff.name}
+                                  </p>
+                                  <p className="text-xs text-text-secondary truncate">{staff.email}</p>
+                                </div>
+                              </div>
+                              <div>
                                 <span
-                                  key={index}
-                                  className="text-xs text-text-secondary bg-card px-2 py-1 rounded border border-border"
+                                  className={cn(
+                                    'inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border',
+                                    getRoleBadgeColor(staff.role)
+                                  )}
                                 >
-                                  {location}
+                                  {staff.role}
                                 </span>
-                              ))}
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-xs font-semibold text-text-secondary uppercase">
+                                  Assigned Locations
+                                </p>
+                                <div className="flex flex-wrap gap-1">
+                                  {staff.locations.map((location, index) => (
+                                    <span
+                                      key={index}
+                                      className="text-xs text-text-secondary bg-card px-2 py-1 rounded border border-border"
+                                    >
+                                      {location}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          </Card>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Pending Invitations Section */}
+                {activeTab === 'pending' && (
+                  <div>
+                    <div className="flex items-center gap-3 mb-4">
+                      <h3 className="text-lg font-semibold text-text-primary">Pending Invitations</h3>
+                      <span className="px-2 py-1 rounded-full bg-primary/20 text-primary text-xs font-medium">
+                        {pendingInvitations.length}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {filteredPendingInvitations.map((invitation) => (
+                        <Card key={invitation.id}>
+                          <div className="space-y-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-full bg-card border border-border flex items-center justify-center">
+                                <Mail className="w-5 h-5 text-text-secondary" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-text-primary truncate">
+                                  {invitation.email}
+                                </p>
+                                <p className="text-xs text-text-secondary">
+                                  Invited as {invitation.role}
+                                </p>
+                              </div>
+                            </div>
+                            <div>
+                              <p className="text-xs text-orange-500">
+                                Expires in {invitation.expiresIn}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2 pt-2 border-t border-border">
+                              <button className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-border bg-card text-text-secondary hover:text-text-primary hover:bg-gray-800 transition-colors">
+                                <Send size={16} />
+                                <span className="text-sm">Resend</span>
+                              </button>
+                              <button className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-border bg-card text-red-500 hover:bg-red-500/20 transition-colors">
+                                <X size={16} />
+                                <span className="text-sm">Cancel</span>
+                              </button>
                             </div>
                           </div>
-                        </div>
-                      </Card>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Pending Invitations Section */}
-            {activeTab === 'pending' && (
-              <div>
-                <div className="flex items-center gap-3 mb-4">
-                  <h3 className="text-lg font-semibold text-text-primary">Pending Invitations</h3>
-                  <span className="px-2 py-1 rounded-full bg-primary/20 text-primary text-xs font-medium">
-                    {pendingInvitations.length}
-                  </span>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {filteredPendingInvitations.map((invitation) => (
-                    <Card key={invitation.id}>
-                      <div className="space-y-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-card border border-border flex items-center justify-center">
-                            <Mail className="w-5 h-5 text-text-secondary" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-text-primary truncate">
-                              {invitation.email}
-                            </p>
-                            <p className="text-xs text-text-secondary">
-                              Invited as {invitation.role}
-                            </p>
-                          </div>
-                        </div>
-                        <div>
-                          <p className="text-xs text-orange-500">
-                            Expires in {invitation.expiresIn}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2 pt-2 border-t border-border">
-                          <button className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-border bg-card text-text-secondary hover:text-text-primary hover:bg-gray-800 transition-colors">
-                            <Send size={16} />
-                            <span className="text-sm">Resend</span>
-                          </button>
-                          <button className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-border bg-card text-red-500 hover:bg-red-500/20 transition-colors">
-                            <X size={16} />
-                            <span className="text-sm">Cancel</span>
-                          </button>
-                        </div>
-                      </div>
-                    </Card>
-                  ))}
-                </div>
-              </div>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
