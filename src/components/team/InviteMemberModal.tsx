@@ -16,6 +16,8 @@ import { Dialog } from '../ui/Dialog';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { cn } from '../../lib/utils';
+import { roleService } from '../../services/role.service';
+import { Role } from '../../types/models.types';
 
 // Mock locations data
 const MOCK_LOCATIONS = [
@@ -35,7 +37,7 @@ const MOCK_LOCATIONS = [
 
 const inviteMemberSchema = z.object({
   email: z.string().email('Invalid email address'),
-  role: z.enum(['Admin', 'Manager', 'Staff']),
+  role: z.string().min(1, 'Role is required'),
 });
 
 type InviteMemberFormData = z.infer<typeof inviteMemberSchema>;
@@ -47,26 +49,7 @@ interface InviteMemberModalProps {
   onSuccess?: (data: InviteMemberFormData & { locations: string[] }) => void;
 }
 
-const ROLES = [
-  {
-    value: 'Admin',
-    label: 'Administrator',
-    description: 'Full access to all settings and team management.',
-    icon: Shield,
-  },
-  {
-    value: 'Manager',
-    label: 'Manager',
-    description: 'Can manage locations and view reports.',
-    icon: Shield,
-  },
-  {
-    value: 'Staff',
-    label: 'Staff',
-    description: 'Read-only access to dashboard and reports.',
-    icon: Shield,
-  },
-] as const;
+
 
 export const InviteMemberModal = ({
   open,
@@ -80,6 +63,7 @@ export const InviteMemberModal = ({
   const [isLocationDropdownOpen, setIsLocationDropdownOpen] = useState(false);
   const [filteredLocations, setFilteredLocations] = useState<string[]>(MOCK_LOCATIONS);
   const [isSending, setIsSending] = useState(false);
+  const [availableRoles, setAvailableRoles] = useState<Role[]>([]);
   const locationInputRef = useRef<HTMLInputElement>(null);
   const locationDropdownRef = useRef<HTMLDivElement>(null);
   const roleDropdownRef = useRef<HTMLDivElement>(null);
@@ -95,19 +79,39 @@ export const InviteMemberModal = ({
     resolver: zodResolver(inviteMemberSchema),
     defaultValues: {
       email: '',
-      role: 'Staff',
+      role: 'operator',
     },
   });
 
   const selectedRole = watch('role');
-  const selectedRoleData = ROLES.find((r) => r.value === selectedRole) || ROLES[2];
+  const selectedRoleData = availableRoles.find((r) => r.roleSlug === selectedRole);
+
+  useEffect(() => {
+    const loadRoles = async () => {
+      try {
+        const response = await roleService.getRoles();
+        if (response.success) {
+          setAvailableRoles(response.data.roles);
+        }
+      } catch (error) {
+        console.error('Failed to load roles:', error);
+      }
+    };
+    loadRoles();
+  }, []);
+
+  // ... (omitting unchanged parts for brevity if possible, but replace_file_content needs contiguous block. I'll target specific blocks if I can, but here the changes are scattered. I will do one large block covering the component body or split it)
+
+  // Actually, I can do multiple replacements if `multi_replace_file_content` is used, but for now I will stick to `replace_file_content` for the whole file or large chunks if I am confident.
+  // Let's use `multi_replace_file_content` for `InviteMemberModal.tsx` since changes are in `selectedRoleData` logic and the JSX rendering. 
+
 
   // Reset form when modal opens/closes
   useEffect(() => {
     if (open) {
       reset({
         email: '',
-        role: 'Staff',
+        role: 'operator',
       });
       setLocations([]);
       setLocationInput('');
@@ -250,9 +254,10 @@ export const InviteMemberModal = ({
               className="w-full flex items-center gap-3 px-4 py-3 rounded-lg border border-border bg-card text-text-primary hover:border-primary/50 transition-colors"
             >
               <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-                <selectedRoleData.icon className="w-4 h-4 text-primary" />
+                <Shield className="w-4 h-4 text-primary" />
               </div>
-              <span className="flex-1 text-left">{selectedRoleData.label}</span>
+              <span className="flex-1 text-left">{selectedRoleData?.roleName || 'Select Role'}</span>
+
               <ChevronDown
                 size={16}
                 className={cn(
@@ -262,32 +267,33 @@ export const InviteMemberModal = ({
               />
             </button>
             {isRoleDropdownOpen && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-card dark:bg-black dark:border-white/10 border border-border rounded-lg shadow-lg z-10">
-                {ROLES.map((role) => (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-card dark:bg-black dark:border-white/10 border border-border rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto">
+                {availableRoles.map((role) => (
                   <button
-                    key={role.value}
+                    key={role.roleId}
                     type="button"
                     onClick={() => {
-                      setValue('role', role.value);
+                      setValue('role', role.roleSlug);
                       setIsRoleDropdownOpen(false);
                     }}
                     className={cn(
                       'w-full flex items-center gap-3 px-4 py-3 hover:bg-background transition-colors',
-                      selectedRole === role.value && 'bg-background'
+                      selectedRole === role.roleSlug && 'bg-background'
                     )}
                   >
                     <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-                      <role.icon className="w-4 h-4 text-primary" />
+                      <Shield className="w-4 h-4 text-primary" />
                     </div>
                     <div className="flex-1 text-left">
-                      <p className="text-sm font-medium text-text-primary">{role.label}</p>
-                      <p className="text-xs text-text-secondary">{role.description}</p>
+                      <p className="text-sm font-medium text-text-primary">{role.roleName}</p>
+                      <p className="text-xs text-text-secondary truncate">{role.description}</p>
                     </div>
                   </button>
                 ))}
               </div>
             )}
-            <p className="text-xs text-text-secondary mt-2">{selectedRoleData.description}</p>
+            <p className="text-xs text-text-secondary mt-2">{selectedRoleData?.description}</p>
+
           </div>
         </div>
 

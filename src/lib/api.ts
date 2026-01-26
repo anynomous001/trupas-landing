@@ -8,28 +8,78 @@ export const api = {
     async request<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
         const { params, headers, ...rest } = options;
 
-        // Construct URL with query parameters
-        const url = new URL(`${BASE_URL}${endpoint}`);
-        if (params) {
-            Object.entries(params).forEach(([key, value]) => url.searchParams.append(key, value));
-        }
+        const makeRequest = async (token?: string | null) => {
+            // Construct URL with query parameters
+            const url = new URL(`${BASE_URL}${endpoint}`);
+            if (params) {
+                Object.entries(params).forEach(([key, value]) => url.searchParams.append(key, value));
+            }
 
-        // Prepare headers
-        const requestHeaders = new Headers(headers);
-        if (!(rest.body instanceof FormData)) {
-            requestHeaders.set('Content-Type', 'application/json');
-        }
+            // Prepare headers
+            const requestHeaders = new Headers(headers);
+            if (!(rest.body instanceof FormData)) {
+                requestHeaders.set('Content-Type', 'application/json');
+            }
 
-        // Add authorization token if available
-        const token = localStorage.getItem('access_token');
-        if (token) {
-            requestHeaders.set('Authorization', `Bearer ${token}`);
-        }
+            // Add authorization token if available
+            const effectiveToken = token !== undefined ? token : localStorage.getItem('access_token');
+            if (effectiveToken) {
+                requestHeaders.set('Authorization', `Bearer ${effectiveToken}`);
+            }
 
-        const response = await fetch(url.toString(), {
-            ...rest,
-            headers: requestHeaders,
-        });
+            const response = await fetch(url.toString(), {
+                ...rest,
+                headers: requestHeaders,
+            });
+
+            return response;
+        };
+
+        let response = await makeRequest();
+
+        // Handle 401 Unauthorized - Attempt Refresh
+        if (response.status === 401) {
+            const refreshToken = localStorage.getItem('refresh_token');
+            if (refreshToken) {
+                try {
+                    // Try to refresh the token
+                    const refreshResponse = await fetch(`${BASE_URL}/auth/refresh`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ refresh_token: refreshToken }),
+                    });
+
+                    if (refreshResponse.ok) {
+                        const data = await refreshResponse.json();
+                        localStorage.setItem('access_token', data.access_token);
+                        // Retry the original request with the new token
+                        response = await makeRequest(data.access_token);
+                    } else {
+                        // Refresh failed (e.g., refresh token expired), clear tokens and throw
+                        localStorage.removeItem('access_token');
+                        localStorage.removeItem('refresh_token');
+                        localStorage.removeItem('user');
+                        localStorage.removeItem('auth-storage');
+                        window.location.href = '/login'; // Redirect to login
+                        throw new Error('Session expired. Please login again.');
+                    }
+                } catch (error) {
+                    console.error('Token refresh failed:', error);
+                    localStorage.removeItem('access_token');
+                    localStorage.removeItem('refresh_token');
+                    localStorage.removeItem('user');
+                    localStorage.removeItem('auth-storage');
+                    window.location.href = '/login';
+                    throw error;
+                }
+            } else {
+                // No refresh token, clear access token if it exists (invalid state)
+                localStorage.removeItem('access_token');
+                // Don't redirect immediately to allow public APIs if any, but usually 401 means auth needed
+            }
+        }
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));

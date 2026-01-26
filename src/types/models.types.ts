@@ -98,48 +98,50 @@ export interface Terminal {
 }
 
 export interface Member {
-    member_id: string;
-    merchant_id: string;
-    first_name: string;
-    last_name: string;
+    memberId: string;
+    merchantId: string;
+    firstName: string;
+    lastName: string;
     email: string;
     phone?: string;
-    profile_photo_url?: string;
+    profilePhotoUrl?: string;
     role: {
-        role_id: string;
-        role_name: string;
-        role_slug: string;
-        scope_level: string;
+        roleId: string;
+        roleName: string;
+        roleSlug: string;
+        scopeLevel: string;
     };
-    scope_level?: string;
-    is_active: boolean;
-    email_verified: boolean;
-    phone_verified: boolean;
-    two_factor_enabled: boolean;
-    last_login_at?: string;
-    login_count: number;
-    is_online: boolean;
-    created_at: string;
-    assigned_locations_count_calculated?: number;
-    assigned_devices_count_calculated?: number;
+    scopeLevel?: string;
+    isActive: boolean;
+    emailVerified: boolean;
+    phoneVerified: boolean;
+    twoFactorEnabled: boolean;
+    lastLoginAt?: string;
+    loginCount: number;
+    isOnline: boolean;
+    createdAt: string;
+    locations: string[];
+    assignedLocationsCountCalculated?: number;
+    assignedDevicesCountCalculated?: number;
+    capabilities?: string[];
 }
 
 export interface MemberShort {
-    member_id: string;
+    memberId: string;
     name: string;
     role: string;
 }
 
 export interface Role {
-    role_id: string;
-    role_name: string;
-    role_slug: string;
-    role_type: 'system' | 'custom';
+    roleId: string;
+    roleName: string;
+    roleSlug: string;
+    roleType: 'system' | 'custom';
     description: string;
-    capabilities_count: number;
-    member_count: number;
-    is_active: boolean;
-    created_at: string;
+    capabilitiesCount: number;
+    memberCount: number;
+    isActive: boolean;
+    createdAt: string;
 }
 
 export interface Capability {
@@ -167,4 +169,25 @@ export interface Alert {
     resolved?: boolean;
     resolved_by?: string;
     resolved_at?: string;
+}
+
+export interface Assignment {
+    assignmentId: string;
+    locationId?: string;
+    terminalId?: string;
+    canManage: boolean;
+}
+
+export interface AuditLogEntry {
+    logId: string;
+    action: string;
+    resourceType: string;
+    status: string;
+    timestamp: string;
+}
+
+export interface MemberDetailed extends Member {
+    locationAssignments: Assignment[];
+    terminalAssignments: Assignment[];
+    recentActivity: AuditLogEntry[];
 }

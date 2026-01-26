@@ -2,28 +2,28 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 
 interface User {
-    member_id: string;
-    merchant_id: string;
-    first_name: string;
-    last_name: string;
+    memberId: string;
+    merchantId: string;
+    firstName: string;
+    lastName: string;
     email: string;
     phone: string | null;
-    profile_photo_url: string | null;
+    profilePhotoUrl: string | null;
     role: {
-        role_id: string;
-        role_name: string;
-        role_slug: string;
-        scope_level: string;
+        roleId: string;
+        roleName: string;
+        roleSlug: string;
+        scopeLevel: string;
     };
-    scope_level: string;
-    is_active: boolean;
-    email_verified: boolean;
-    phone_verified: boolean;
-    two_factor_enabled: boolean;
-    last_login_at: string;
-    login_count: number;
-    is_online: boolean;
-    created_at: string;
+    scopeLevel: string;
+    isActive: boolean;
+    emailVerified: boolean;
+    phoneVerified: boolean;
+    twoFactorEnabled: boolean;
+    lastLoginAt: string;
+    loginCount: number;
+    isOnline: boolean;
+    createdAt: string;
     capabilities: string[];
 }
 
@@ -45,10 +45,12 @@ export const useAuthStore = create<AuthState>()(
             isAuthenticated: false,
             setAuth: (user, access_token, refresh_token) => {
                 localStorage.setItem('access_token', access_token);
+                localStorage.setItem('refresh_token', refresh_token);
                 set({ user, access_token, refresh_token, isAuthenticated: true });
             },
             logout: () => {
                 localStorage.removeItem('access_token');
+                localStorage.removeItem('refresh_token');
                 set({ user: null, access_token: null, refresh_token: null, isAuthenticated: false });
             },
         }),

@@ -10,6 +10,8 @@ import {
   X,
   ChevronDown,
 } from 'lucide-react';
+import { teamService } from '../services/team.service';
+import { Member } from '../types/models.types';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
@@ -22,21 +24,11 @@ import { api } from '../lib/api';
 
 type TabType = 'core' | 'staffs' | 'pending';
 
-interface TeamMember {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  locations: string[];
-  avatar?: string;
-  initials?: string;
-}
-
 interface PendingInvitation {
   id: string;
   email: string;
-  role: 'Admin' | 'Manager' | 'Staff';
-  expiresIn: string;
+  role: string;
+  expiresAt: string;
 }
 
 export const TeamManagement = (): JSX.Element => {
@@ -51,34 +43,47 @@ export const TeamManagement = (): JSX.Element => {
     locations: string[];
   } | null>(null);
 
-  const [members, setMembers] = useState<TeamMember[]>([]);
+  const [members, setMembers] = useState<Member[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [pendingInvitations, setPendingInvitations] = useState<PendingInvitation[]>([]);
+
+  const fetchMembers = async () => {
+    setIsLoading(true);
+    try {
+      const response = await teamService.getMembers({
+        search: searchQuery
+      });
+      setMembers(response.data.members || []);
+    } catch (error) {
+      console.error('Failed to fetch members:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchInvitations = async () => {
+    try {
+      // Corrected URL: api instance already prepends /api/v1
+      const response = await api.get<any>('/team/invitations');
+      if (response.success) {
+        setPendingInvitations(response.data.map((inv: any) => ({
+          id: inv.invitation_id,
+          email: inv.email,
+          role: inv.role?.role_name || 'Staff',
+          expiresAt: inv.expires_at
+        })));
+      }
+    } catch (error) {
+      console.error('Failed to fetch invitations:', error);
+    }
+  };
 
   useEffect(() => {
-    const fetchMembers = async () => {
-      setIsLoading(true);
-      try {
-        const response = await api.get<any>('/team/members');
-        if (response.success && response.data.members) {
-          const fetchedMembers: TeamMember[] = response.data.members.map((m: any) => ({
-            id: m.memberId,
-            name: `${m.firstName} ${m.lastName}`,
-            email: m.email,
-            role: m.role?.roleName || 'Staff',
-            locations: m.locations || (m.role?.roleSlug === 'root_user' ? ['Global Access'] : ['Branch A']),
-            avatar: `${m.firstName.charAt(0)}${m.lastName.charAt(0)}`,
-          }));
-          setMembers(fetchedMembers);
-        }
-      } catch (error) {
-        console.error('Failed to fetch members:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     fetchMembers();
-  }, []);
+    if (activeTab === 'pending') {
+      fetchInvitations();
+    }
+  }, [activeTab, searchQuery]);
 
   // Check for invite trigger from URL
   useEffect(() => {
@@ -88,55 +93,20 @@ export const TeamManagement = (): JSX.Element => {
       setSearchParams({}, { replace: true });
     }
   }, [searchParams, setSearchParams]);
-  const [pendingInvitations, setPendingInvitations] = useState<PendingInvitation[]>([
-    {
-      id: '1',
-      email: 'new.member@company.com',
-      role: 'Manager',
-      expiresIn: '2 days',
-    },
-    {
-      id: '2',
-      email: 'finance@company.com',
-      role: 'Staff',
-      expiresIn: '5 days',
-    },
-    {
-      id: '3',
-      email: 'audit.team@external.com',
-      role: 'Admin',
-      expiresIn: '12 hours',
-    },
-  ]);
-
   const coreMembers = members.filter(
-    (m) => m.role === 'Root User' || m.role === 'Admin' || m.role === 'Manager' || m.role === 'Administrator'
+    (m) => m.role?.roleSlug === 'root_user' || m.role?.roleSlug === 'admin' || m.role?.roleSlug === 'manager'
   );
 
   const staffs = members.filter(
-    (m) => m.role === 'Staff' || m.role === 'Operator'
+    (m) => m.role?.roleSlug === 'operator' || m.role?.roleSlug === 'viewer'
   );
 
-  const handleInviteMember = (data: {
-    email: string;
-    role: 'Admin' | 'Manager' | 'Staff';
-    locations: string[];
-  }) => {
-    // Add new invitation to the list (in real app, this would be an API call)
-    const newInvitation: PendingInvitation = {
-      id: Date.now().toString(),
-      email: data.email,
-      role: data.role,
-      expiresIn: '7 days', // Default expiration
-    };
-    setPendingInvitations([...pendingInvitations, newInvitation]);
+  const handleInviteMember = async () => {
+    // This is handled by InviteMemberModal.onInvite but we can use it to refresh
+    fetchInvitations();
   };
 
-  const handleInviteSuccess = (data: {
-    email: string;
-    role: 'Admin' | 'Manager' | 'Staff';
-    locations: string[];
-  }) => {
+  const handleInviteSuccess = (data: any) => {
     // Store invitation data for success modal
     setLastInvitationData({
       email: data.email,
@@ -159,38 +129,45 @@ export const TeamManagement = (): JSX.Element => {
     setIsInviteModalOpen(true);
   };
 
-  const getRoleBadgeColor = (role: string) => {
-    switch (role) {
-      case 'Admin':
-      case 'Administrator':
+  const getRoleBadgeColor = (roleSlug: string) => {
+    switch (roleSlug) {
+      case 'admin':
         return 'bg-purple-500/20 text-purple-500 border-purple-500/50';
-      case 'Manager':
+      case 'manager':
         return 'bg-blue-500/20 text-blue-500 border-blue-500/50';
-      case 'Staff':
-      case 'Operator':
+      case 'operator':
+      case 'viewer':
         return 'bg-gray-500/20 text-gray-500 border-gray-500/50';
-      case 'Root User':
+      case 'root_user':
         return 'bg-red-500/20 text-red-500 border-red-500/50';
       default:
         return 'bg-gray-500/20 text-gray-500 border-gray-500/50';
     }
   };
 
-  const filteredCoreMembers = coreMembers.filter(
-    (member) =>
-      member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      member.email.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const handleResendInvite = async (id: string) => {
+    try {
+      await teamService.resendInvitation(id);
+      alert('Invitation resent successfully');
+    } catch (error) {
+      console.error('Failed to resend invitation:', error);
+    }
+  };
 
-  const filteredStaffs = staffs.filter(
-    (staff) =>
-      staff.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      staff.email.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const handleCancelInvite = async (id: string) => {
+    if (window.confirm('Are you sure you want to cancel this invitation?')) {
+      try {
+        await teamService.cancelInvitation(id);
+        fetchInvitations();
+      } catch (error) {
+        console.error('Failed to cancel invitation:', error);
+      }
+    }
+  };
 
-  const filteredPendingInvitations = pendingInvitations.filter((invitation) =>
-    invitation.email.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredCoreMembers = coreMembers;
+  const filteredStaffs = staffs;
+  const filteredPendingInvitations = pendingInvitations;
 
   return (
     <DashboardLayout>
@@ -309,8 +286,8 @@ export const TeamManagement = (): JSX.Element => {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                       {filteredCoreMembers.map((member) => (
                         <Link
-                          key={member.id}
-                          to={`${ROUTES.TEAM_MANAGEMENT}/${member.id}`}
+                          key={member.memberId}
+                          to={`${ROUTES.TEAM_MANAGEMENT}/${member.memberId}`}
                           className="block"
                         >
                           <Card className="relative cursor-pointer hover:border-primary/50 transition-colors">
@@ -327,11 +304,11 @@ export const TeamManagement = (): JSX.Element => {
                             <div className="space-y-4">
                               <div className="flex items-center gap-3">
                                 <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center text-white font-semibold">
-                                  {member.avatar || member.initials || member.name.charAt(0)}
+                                  {member.profilePhotoUrl || member.firstName.charAt(0)}
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <p className="text-sm font-medium text-text-primary truncate">
-                                    {member.name}
+                                    {member.firstName} {member.lastName}
                                   </p>
                                   <p className="text-xs text-text-secondary truncate">{member.email}</p>
                                 </div>
@@ -340,10 +317,10 @@ export const TeamManagement = (): JSX.Element => {
                                 <span
                                   className={cn(
                                     'inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border',
-                                    getRoleBadgeColor(member.role)
+                                    getRoleBadgeColor(member.role.roleSlug)
                                   )}
                                 >
-                                  {member.role}
+                                  {member.role.roleName}
                                 </span>
                               </div>
                               <div className="space-y-1">
@@ -381,8 +358,8 @@ export const TeamManagement = (): JSX.Element => {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                       {filteredStaffs.map((staff) => (
                         <Link
-                          key={staff.id}
-                          to={`${ROUTES.TEAM_MANAGEMENT}/${staff.id}`}
+                          key={staff.memberId}
+                          to={`${ROUTES.TEAM_MANAGEMENT}/${staff.memberId}`}
                           className="block"
                         >
                           <Card className="relative cursor-pointer hover:border-primary/50 transition-colors">
@@ -399,11 +376,11 @@ export const TeamManagement = (): JSX.Element => {
                             <div className="space-y-4">
                               <div className="flex items-center gap-3">
                                 <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-semibold">
-                                  {staff.avatar || staff.initials || staff.name.charAt(0)}
+                                  {staff.profilePhotoUrl || staff.firstName.charAt(0)}
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <p className="text-sm font-medium text-text-primary truncate">
-                                    {staff.name}
+                                    {staff.firstName} {staff.lastName}
                                   </p>
                                   <p className="text-xs text-text-secondary truncate">{staff.email}</p>
                                 </div>
@@ -412,10 +389,10 @@ export const TeamManagement = (): JSX.Element => {
                                 <span
                                   className={cn(
                                     'inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border',
-                                    getRoleBadgeColor(staff.role)
+                                    getRoleBadgeColor(staff.role.roleSlug)
                                   )}
                                 >
-                                  {staff.role}
+                                  {staff.role.roleName}
                                 </span>
                               </div>
                               <div className="space-y-1">
@@ -469,15 +446,21 @@ export const TeamManagement = (): JSX.Element => {
                             </div>
                             <div>
                               <p className="text-xs text-orange-500">
-                                Expires in {invitation.expiresIn}
+                                Expires at {new Date(invitation.expiresAt).toLocaleDateString()}
                               </p>
                             </div>
                             <div className="flex items-center gap-2 pt-2 border-t border-border">
-                              <button className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-border bg-card text-text-secondary hover:text-text-primary hover:bg-gray-800 transition-colors">
+                              <button
+                                onClick={() => handleResendInvite(invitation.id)}
+                                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-border bg-card text-text-secondary hover:text-text-primary hover:bg-gray-800 transition-colors"
+                              >
                                 <Send size={16} />
                                 <span className="text-sm">Resend</span>
                               </button>
-                              <button className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-border bg-card text-red-500 hover:bg-red-500/20 transition-colors">
+                              <button
+                                onClick={() => handleCancelInvite(invitation.id)}
+                                className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-border bg-card text-red-500 hover:bg-red-500/20 transition-colors"
+                              >
                                 <X size={16} />
                                 <span className="text-sm">Cancel</span>
                               </button>

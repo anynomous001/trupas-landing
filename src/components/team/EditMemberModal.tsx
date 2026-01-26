@@ -14,12 +14,15 @@ import { Dialog } from '../ui/Dialog';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { cn } from '../../lib/utils';
+import { roleService } from '../../services/role.service';
+import { Role } from '../../types/models.types';
+import { Member } from '../../types/models.types';
 
 const editMemberSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
   email: z.string().email('Invalid email address'),
-  role: z.enum(['Admin', 'Manager', 'Staff']),
+  role: z.string().min(1, 'Role is required'),
 });
 
 type EditMemberFormData = z.infer<typeof editMemberSchema>;
@@ -27,37 +30,11 @@ type EditMemberFormData = z.infer<typeof editMemberSchema>;
 interface EditMemberModalProps {
   open: boolean;
   onClose: () => void;
-  member: {
-    id: string;
-    name: string;
-    email: string;
-    role: string;
-    locations: string[];
-    avatar?: string;
-  };
+  member: Member;
   onSave: (data: EditMemberFormData & { locations: string[] }) => void;
 }
 
-const ROLES = [
-  {
-    value: 'Admin',
-    label: 'Administrator',
-    description: 'Full access to all settings and team management.',
-    icon: Shield,
-  },
-  {
-    value: 'Manager',
-    label: 'Manager',
-    description: 'Can manage locations and view reports.',
-    icon: Shield,
-  },
-  {
-    value: 'Staff',
-    label: 'Staff',
-    description: 'Read-only access to dashboard and reports.',
-    icon: Shield,
-  },
-] as const;
+
 
 export const EditMemberModal = ({
   open,
@@ -65,11 +42,12 @@ export const EditMemberModal = ({
   member,
   onSave,
 }: EditMemberModalProps) => {
-  const [locations, setLocations] = useState<string[]>(member.locations || []);
+  const [locations, setLocations] = useState<string[]>([]);
   const [locationInput, setLocationInput] = useState('');
   const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [availableRoles, setAvailableRoles] = useState<Role[]>([]);
   const locationInputRef = useRef<HTMLInputElement>(null);
   const roleDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -83,25 +61,40 @@ export const EditMemberModal = ({
   } = useForm<EditMemberFormData>({
     resolver: zodResolver(editMemberSchema),
     defaultValues: {
-      firstName: member.name.split(' ')[0] || '',
-      lastName: member.name.split(' ').slice(1).join(' ') || '',
+      firstName: member.firstName || '',
+      lastName: member.lastName || '',
       email: member.email,
-      role: (member.role as 'Admin' | 'Manager' | 'Staff') || 'Staff',
+      role: (member.role?.roleSlug as any) || 'operator',
     },
   });
 
   const selectedRole = watch('role');
-  const selectedRoleData = ROLES.find((r) => r.value === selectedRole) || ROLES[0];
+  const selectedRoleData = availableRoles.find((r) => r.roleSlug === selectedRole);
+
+  useEffect(() => {
+    const loadRoles = async () => {
+      try {
+        const response = await roleService.getRoles();
+        if (response.success) {
+          setAvailableRoles(response.data.roles);
+        }
+      } catch (error) {
+        console.error('Failed to load roles:', error);
+      }
+    };
+    loadRoles();
+  }, []);
 
   // Initialize locations from member prop
   useEffect(() => {
     if (open) {
-      setLocations(member.locations || []);
+      // In a real app we'd fetch assignments if not present
+      setLocations([]);
       reset({
-        firstName: member.name.split(' ')[0] || '',
-        lastName: member.name.split(' ').slice(1).join(' ') || '',
+        firstName: member.firstName || '',
+        lastName: member.lastName || '',
         email: member.email,
-        role: (member.role as 'Admin' | 'Manager' | 'Staff') || 'Staff',
+        role: (member.role?.roleSlug as any) || 'operator',
       });
     }
   }, [open, member, reset]);
@@ -207,7 +200,8 @@ export const EditMemberModal = ({
                   className="w-full h-full object-cover"
                 />
               ) : (
-                member.avatar || member.name.charAt(0)
+                member.profilePhotoUrl || (member.firstName?.charAt(0) || '?')
+
               )}
             </div>
             <label
@@ -290,9 +284,9 @@ export const EditMemberModal = ({
               className="w-full flex items-center gap-3 px-4 py-3 rounded-lg border border-border bg-card text-text-primary hover:border-primary/50 transition-colors"
             >
               <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-                <selectedRoleData.icon className="w-4 h-4 text-primary" />
+                <Shield className="w-4 h-4 text-primary" />
               </div>
-              <span className="flex-1 text-left">{selectedRoleData.label}</span>
+              <span className="flex-1 text-left">{selectedRoleData?.roleName || 'Select Role'}</span>
               <ChevronDown
                 size={16}
                 className={cn(
@@ -302,32 +296,32 @@ export const EditMemberModal = ({
               />
             </button>
             {isRoleDropdownOpen && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-card dark:bg-black dark:border-white/10 border border-border rounded-lg shadow-lg z-10">
-                {ROLES.map((role) => (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-card dark:bg-black dark:border-white/10 border border-border rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto">
+                {availableRoles.map((role) => (
                   <button
-                    key={role.value}
+                    key={role.roleId}
                     type="button"
                     onClick={() => {
-                      setValue('role', role.value);
+                      setValue('role', role.roleSlug as any);
                       setIsRoleDropdownOpen(false);
                     }}
                     className={cn(
                       'w-full flex items-center gap-3 px-4 py-3 hover:bg-background transition-colors',
-                      selectedRole === role.value && 'bg-background'
+                      selectedRole === role.roleSlug && 'bg-background'
                     )}
                   >
                     <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-                      <role.icon className="w-4 h-4 text-primary" />
+                      <Shield className="w-4 h-4 text-primary" />
                     </div>
                     <div className="flex-1 text-left">
-                      <p className="text-sm font-medium text-text-primary">{role.label}</p>
-                      <p className="text-xs text-text-secondary">{role.description}</p>
+                      <p className="text-sm font-medium text-text-primary">{role.roleName}</p>
+                      <p className="text-xs text-text-secondary truncate">{role.description}</p>
                     </div>
                   </button>
                 ))}
               </div>
             )}
-            <p className="text-xs text-text-secondary mt-2">{selectedRoleData.description}</p>
+            <p className="text-xs text-text-secondary mt-2">{selectedRoleData?.description}</p>
           </div>
         </div>
 

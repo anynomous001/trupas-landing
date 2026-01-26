@@ -21,7 +21,9 @@ import { EditMemberModal } from '../components/team/EditMemberModal';
 import { DeactivateMemberModal } from '../components/team/DeactivateMemberModal';
 import { ROUTES } from '../config/routes';
 import { cn } from '../lib/utils';
-import { useAuthStore } from '../stores/authStore';
+import { Member } from '../types/models.types';
+import { teamService } from '../services/team.service';
+import { Loader2, AlertCircle } from 'lucide-react';
 
 interface Capability {
   id: string;
@@ -34,163 +36,92 @@ export const MemberDetails = (): JSX.Element => {
   const { id } = useParams<{ id: string }>();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeactivateModalOpen, setIsDeactivateModalOpen] = useState(false);
-  const user = useAuthStore((state) => state.user);
+  const [member, setMember] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Determine member data based on ID
-  const getMemberData = (memberId?: string) => {
-    if (memberId === 'root' || memberId === user?.member_id) {
-      if (user) {
-        return {
-          id: user.member_id,
-          name: `${user.first_name} ${user.last_name}`,
-          email: user.email,
-          role: user.role.role_slug.toUpperCase(),
-          title: user.role.role_name,
-          avatar: `${user.first_name.charAt(0)}${user.last_name.charAt(0)}`,
-          addedDate: new Date(user.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
-          lastLogin: new Date(user.last_login_at).toLocaleString(),
-          userId: user.member_id,
-          locations: ['All Locations'],
-          twoFactorEnabled: user.two_factor_enabled,
-          lastIpAddress: 'Session IP',
-        };
-      }
-      return {
-        id: 'root',
-        name: 'Admin User',
-        email: 'admin@truepas.com',
-        role: 'ROOT_USER',
-        title: 'Root User',
-        avatar: 'AU',
-        addedDate: 'Jan 15, 2023',
-        lastLogin: 'Today, 10:15 AM',
-        userId: 'usr_root_001',
-        locations: ['All Locations'],
-        twoFactorEnabled: true,
-        lastIpAddress: '192.168.1.1',
-      };
-    }
-    // Default member data
-    return {
-      id: memberId || '1',
-      name: 'Sarah Jenkins',
-      email: 'sarah@company.com',
-      role: 'ADMIN',
-      title: 'Head of Operations',
-      avatar: 'SJ',
-      addedDate: 'Oct 24, 2023',
-      lastLogin: 'Today, 9:42 AM',
-      userId: 'usr_83920_abX92',
-      locations: ['Orlando HQ', 'Miami Terminal B', 'New York Office', 'Chicago Branch'],
-      twoFactorEnabled: true,
-      lastIpAddress: '192.168.1.42',
-    };
-  };
-
-  const [memberData, setMemberData] = useState(() => getMemberData(id));
-
-  // Update member data when ID changes
   useEffect(() => {
-    setMemberData(getMemberData(id));
+    const fetchMember = async () => {
+      if (!id) return;
+      setIsLoading(true);
+      setError(null);
+      try {
+        const response = await teamService.getMemberById(id);
+        if (response.success) {
+          setMember(response.data);
+        } else {
+          setError(response.message || 'Failed to fetch member details');
+        }
+      } catch (err: any) {
+        setError(err.message || 'An unexpected error occurred');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchMember();
   }, [id]);
 
-  // Mock data - in real app, this would come from API based on id
-  const member = memberData;
-
-  const capabilities: Capability[] = [
-    {
-      id: '1',
-      name: 'Manage Billing',
-      description: 'Can view invoices and update payment methods.',
-      enabled: true,
-    },
-    {
-      id: '2',
-      name: 'Invite Members',
-      description: 'Can add new users to the team.',
-      enabled: true,
-    },
-    {
-      id: '3',
-      name: 'View API Keys',
-      description: 'Read-only access to production keys.',
-      enabled: true,
-    },
-    {
-      id: '4',
-      name: 'Manage Webhooks',
-      description: 'Configure endpoint URLs.',
-      enabled: true,
-    },
-    {
-      id: '5',
-      name: 'Delete Account',
-      description: 'Root capability only.',
-      enabled: false,
-    },
-  ];
-
-  const recentActivities = [
-    {
-      id: '1',
-      icon: Key,
-      iconColor: 'text-blue-500',
-      action: 'Updated API Key configuration',
-      time: '2h ago',
-    },
-    {
-      id: '2',
-      icon: UserPlus,
-      iconColor: 'text-green-500',
-      action: 'Invited new member **John Doe**',
-      time: '5h ago',
-    },
-    {
-      id: '3',
-      icon: FileText,
-      iconColor: 'text-purple-500',
-      action: 'Downloaded invoice #INV-2023-001',
-      time: '1d ago',
-    },
-  ];
-
-  const getRoleBadgeColor = (role: string) => {
-    switch (role) {
-      case 'ADMIN':
-      case 'Admin':
+  const getRoleBadgeColor = (roleSlug: string) => {
+    switch (roleSlug?.toLowerCase()) {
+      case 'root_user':
+      case 'admin':
         return 'bg-blue-500/20 text-blue-500 border-blue-500/50';
-      case 'Manager':
+      case 'manager':
         return 'bg-blue-500/20 text-blue-500 border-blue-500/50';
-      case 'Staff':
+      case 'staff':
+      case 'operator':
         return 'bg-gray-500/20 text-gray-500 border-gray-500/50';
       default:
         return 'bg-gray-500/20 text-gray-500 border-gray-500/50';
     }
   };
 
-  const handleSaveMember = (data: {
-    firstName: string;
-    lastName: string;
-    email: string;
-    role: 'Admin' | 'Manager' | 'Staff';
-    locations: string[];
-  }) => {
-    // Update local state (in real app, this would be an API call)
-    setMemberData({
-      ...memberData,
-      name: `${data.firstName} ${data.lastName}`,
-      email: data.email,
-      role: data.role,
-      locations: data.locations,
-    });
+  const handleSaveMember = (data: any) => {
+    // Refresh data after save
+    window.location.reload();
   };
 
   const handleDeactivateMember = () => {
-    // Deactivate member (in real app, this would be an API call)
-    // For now, we'll just show a success message or update state
-    console.log('Member deactivated:', memberData.name);
-    // You could update memberData to include a status field if needed
+    // For now, just log or refresh
+    console.log('Member deactivated:', member?.memberId);
+    window.location.reload();
   };
+
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (error || !member) {
+    return (
+      <DashboardLayout>
+        <div className="p-6">
+          <Card className="bg-red-500/10 border-red-500/50">
+            <div className="flex items-center gap-3 text-red-500">
+              <AlertCircle size={24} />
+              <div>
+                <h3 className="font-bold">Error Loading Member</h3>
+                <p className="text-sm">{error || 'Member not found'}</p>
+              </div>
+            </div>
+            <Button variant="outline" className="mt-4 border-red-500/50 text-red-500" onClick={() => window.location.reload()}>
+              Retry
+            </Button>
+          </Card>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  const avatar = `${member.firstName?.charAt(0) || ''}${member.lastName?.charAt(0) || ''}`;
+  const addedDate = new Date(member.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  const lastLogin = member.lastLoginAt ? new Date(member.lastLoginAt).toLocaleString() : 'Never';
 
   return (
     <DashboardLayout>
@@ -236,23 +167,23 @@ export const MemberDetails = (): JSX.Element => {
             <div className="flex items-start gap-6">
               <div className="relative">
                 <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-2xl font-bold">
-                  {member.avatar}
+                  {avatar}
                 </div>
-                <div className="absolute bottom-0 right-0 w-6 h-6 bg-green-500 rounded-full border-4 border-card"></div>
+                <div className={cn("absolute bottom-0 right-0 w-6 h-6 rounded-full border-4 border-card", member.isOnline ? "bg-green-500" : "bg-gray-400")}></div>
               </div>
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-2">
-                  <h3 className="text-2xl font-bold text-text-primary">{member.name}</h3>
+                  <h3 className="text-2xl font-bold text-text-primary">{member.firstName} {member.lastName}</h3>
                   <span
                     className={cn(
                       'inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border',
-                      getRoleBadgeColor(member.role)
+                      getRoleBadgeColor(member.role?.roleSlug)
                     )}
                   >
-                    {member.role}
+                    {member.role?.roleName}
                   </span>
                 </div>
-                <p className="text-text-secondary mb-4">{member.title}</p>
+                <p className="text-text-secondary mb-4">{member.role?.description}</p>
                 <div className="flex flex-wrap gap-2">
                   <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-card border border-border text-sm text-text-secondary">
                     <Mail size={14} />
@@ -260,7 +191,7 @@ export const MemberDetails = (): JSX.Element => {
                   </div>
                   <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-card border border-border text-sm text-text-secondary">
                     <Clock size={14} />
-                    <span>Added {member.addedDate}</span>
+                    <span>Added {addedDate}</span>
                   </div>
                 </div>
               </div>
@@ -286,13 +217,13 @@ export const MemberDetails = (): JSX.Element => {
                           <p className="text-xs font-semibold text-text-secondary uppercase mb-1">
                             USER ID
                           </p>
-                          <p className="text-sm font-mono text-text-primary">{member.userId}</p>
+                          <p className="text-sm font-mono text-text-primary">{member.memberId}</p>
                         </div>
                         <div>
                           <p className="text-xs font-semibold text-text-secondary uppercase mb-1">
                             LAST LOGIN
                           </p>
-                          <p className="text-sm text-text-primary">{member.lastLogin}</p>
+                          <p className="text-sm text-text-primary">{lastLogin}</p>
                         </div>
                       </div>
                       {/* Right Column */}
@@ -303,7 +234,7 @@ export const MemberDetails = (): JSX.Element => {
                           </p>
                           <div className="flex items-center gap-2">
                             <Shield className="w-4 h-4 text-purple-500" />
-                            <span className="text-sm text-text-primary">Organization Admin</span>
+                            <span className="text-sm text-text-primary">{member.role?.roleName}</span>
                           </div>
                         </div>
                         <div>
@@ -311,14 +242,16 @@ export const MemberDetails = (): JSX.Element => {
                             ASSIGNED LOCATIONS
                           </p>
                           <div className="flex flex-wrap gap-2">
-                            {member.locations.map((location, index) => (
+                            {member.locationAssignments?.map((assignment: any, index: number) => (
                               <span
                                 key={index}
                                 className="px-2 py-1 rounded-full bg-card border border-border text-xs text-text-secondary"
                               >
-                                {location}
+                                {assignment.locationName || 'Global'}
                               </span>
-                            ))}
+                            )) || (
+                                <span className="text-sm text-text-secondary italic">No locations assigned</span>
+                              )}
                           </div>
                         </div>
                       </div>
@@ -329,24 +262,26 @@ export const MemberDetails = (): JSX.Element => {
                   <div className="pt-6 border-t border-border">
                     <h3 className="text-lg font-semibold text-text-primary mb-4">Recent Activity</h3>
                     <div className="space-y-3">
-                      {recentActivities.map((activity) => (
+                      {member.recentActivity?.length > 0 ? member.recentActivity.map((activity: any) => (
                         <div
-                          key={activity.id}
+                          key={activity.logId}
                           className="flex items-center justify-between p-3 rounded-lg bg-card border border-border"
                         >
                           <div className="flex items-center gap-3 flex-1 min-w-0">
-                            <div className={cn('w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0', {
-                              'bg-blue-500/20': activity.iconColor === 'text-blue-500',
-                              'bg-green-500/20': activity.iconColor === 'text-green-500',
-                              'bg-purple-500/20': activity.iconColor === 'text-purple-500',
-                            })}>
-                              <activity.icon className={cn('w-5 h-5', activity.iconColor)} />
+                            <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-blue-500/20">
+                              <FileText className="w-5 h-5 text-blue-500" />
                             </div>
-                            <p className="text-sm text-text-primary">{activity.action}</p>
+                            <p className="text-sm text-text-primary capitalize">
+                              {activity.action.split('_').join(' ')}
+                            </p>
                           </div>
-                          <p className="text-xs text-text-secondary">{activity.time}</p>
+                          <p className="text-xs text-text-secondary">
+                            {new Date(activity.timestamp).toLocaleDateString()}
+                          </p>
                         </div>
-                      ))}
+                      )) : (
+                        <p className="text-sm text-text-secondary italic">No recent activity found</p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -362,28 +297,20 @@ export const MemberDetails = (): JSX.Element => {
                     <h3 className="text-lg font-semibold text-text-primary">Capabilities</h3>
                   </div>
                   <p className="text-sm text-text-secondary">
-                    Effective permissions based on <span className="font-semibold text-text-primary">Admin</span> role.
+                    Effective permissions based on <span className="font-semibold text-text-primary">{member.role?.roleName}</span> role.
                   </p>
                   <div className="space-y-4">
-                    {capabilities.map((capability) => (
-                      <div key={capability.id} className="space-y-1">
-                        <div className="flex items-start gap-2">
-                          {capability.enabled ? (
-                            <Check className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
-                          ) : (
-                            <X className="w-5 h-5 text-gray-500 flex-shrink-0 mt-0.5" />
-                          )}
-                          <div className="flex-1">
-                            <p className="text-sm font-medium text-text-primary">
-                              {capability.name}
-                            </p>
-                            <p className="text-xs text-text-secondary mt-1">
-                              {capability.description}
-                            </p>
-                          </div>
-                        </div>
+                    {/* Placeholder for capabilities - in real app, these would come from the role's capability list */}
+                    <div className="p-4 rounded-lg bg-blue-500/5 border border-blue-500/10">
+                      <p className="text-sm text-text-primary mb-2 font-medium">Included Capabilities:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {member.capabilities?.map((cap: string) => (
+                          <span key={cap} className="px-2 py-1 rounded bg-blue-500/10 text-blue-500 text-xs font-mono">
+                            {cap}
+                          </span>
+                        )) || <span className="text-sm text-text-secondary italic">Standard permissions for {member.role?.roleName}</span>}
                       </div>
-                    ))}
+                    </div>
                   </div>
                   <div className="pt-4 border-t border-border">
                     <Button variant="secondary" className="w-full rounded-full">
@@ -397,18 +324,10 @@ export const MemberDetails = (): JSX.Element => {
         </div>
       </div>
 
-      {/* Edit Member Modal */}
       <EditMemberModal
         open={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
-        member={{
-          id: member.id,
-          name: member.name,
-          email: member.email,
-          role: member.role === 'ADMIN' ? 'Admin' : (member.role as 'Admin' | 'Manager' | 'Staff'),
-          locations: member.locations,
-          avatar: member.avatar,
-        }}
+        member={member}
         onSave={handleSaveMember}
       />
 
@@ -416,7 +335,7 @@ export const MemberDetails = (): JSX.Element => {
       <DeactivateMemberModal
         open={isDeactivateModalOpen}
         onClose={() => setIsDeactivateModalOpen(false)}
-        memberName={member.name}
+        memberName={`${member.first_name} ${member.last_name}`}
         onDeactivate={handleDeactivateMember}
       />
     </DashboardLayout>
