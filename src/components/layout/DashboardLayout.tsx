@@ -55,7 +55,11 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps): JSX.Element
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+<<<<<<< HEAD
 
+=======
+
+>>>>>>> origin/feature-team
   const toggleSidebar = () => {
     setIsCollapsed(!isCollapsed);
   };
@@ -234,16 +238,16 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps): JSX.Element
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-text-primary truncate">{fullName}</p>
                 <p className="text-xs text-text-secondary truncate">{roleName}</p>
-              </div>
-            </div>
+              </div >
+            </div >
           )}
-        </Link>
-      </aside>
+        </Link >
+      </aside >
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden lg:ml-0">
+      < div className="flex-1 flex flex-col overflow-hidden lg:ml-0" >
         {/* Top Header */}
-        <header className="border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-[#0f1013]/80 backdrop-blur-md px-4 lg:px-6 py-4 lg:py-6 flex items-center justify-between flex-shrink-0">
+        < header className="border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-[#0f1013]/80 backdrop-blur-md px-4 lg:px-6 py-4 lg:py-6 flex items-center justify-between flex-shrink-0" >
           <div className="flex items-center gap-3 lg:gap-4 flex-1 min-w-0">
             {/* Mobile Menu Toggle / Desktop Toggle Sidebar Button */}
             <button
@@ -271,7 +275,7 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps): JSX.Element
               <div className="hidden md:flex items-center gap-2 lg:gap-3 flex-shrink-0">
                 <div className="w-8 h-8 lg:w-10 lg:h-10 rounded bg-primary flex items-center justify-center text-white font-bold text-sm lg:text-base">
                   {merchantName.substring(0, 3).toUpperCase()}
-                </div>
+                </div >
                 <div className="hidden lg:block">
                   <button className="flex items-center gap-1 text-text-primary text-sm lg:text-base font-medium hover:text-primary">
                     {merchantName}
@@ -279,10 +283,10 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps): JSX.Element
                   </button>
                   <p className="text-xs text-text-secondary">Enterprise Plan</p>
                 </div>
-              </div>
+              </div >
 
               {/* Search Bar */}
-              <div className="flex-1 max-w-md min-w-0">
+              < div className="flex-1 max-w-md min-w-0" >
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 lg:w-5 lg:h-5 text-text-secondary" />
                   <Input
@@ -290,12 +294,12 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps): JSX.Element
                     className="pl-9 lg:pl-10 bg-background text-sm lg:text-base"
                   />
                 </div>
-              </div>
-            </div>
-          </div>
+              </div >
+            </div >
+          </div >
 
           {/* Right Icons */}
-          <div className="flex items-center gap-2 lg:gap-4 flex-shrink-0">
+          < div className="flex items-center gap-2 lg:gap-4 flex-shrink-0" >
             <button className="relative p-1.5 lg:p-2 text-text-secondary hover:text-text-primary transition-colors">
               <Bell size={18} className="lg:w-5 lg:h-5" />
               <span className="absolute top-0.5 right-0.5 lg:top-1 lg:right-1 w-1.5 h-1.5 lg:w-2 lg:h-2 bg-red-500 rounded-full"></span>
@@ -311,12 +315,12 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps): JSX.Element
                 <Sun size={18} className="lg:w-5 lg:h-5" />
               )}
             </button>
-          </div>
-        </header>
+          </div >
+        </header >
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto">{children}</main>
-      </div>
-    </div>
+        < main className="flex-1 overflow-y-auto" > {children}</main >
+      </div >
+    </div >
   );
 };

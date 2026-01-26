@@ -68,6 +68,7 @@ export const Login = (): JSX.Element => {
             to={ROUTES.ONBOARDING.ACCOUNT_DETAILS}
             className="text-sm text-text-secondary hover:text-text-primary"
           >
+            New to TruePas? <span className="text-primary font-semibold">Sign Up</span>
           </Link>
         </div>
 
@@ -162,6 +163,51 @@ export const Login = (): JSX.Element => {
               )}
             </Button>
 
+            {/* Separator */}
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-border"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-4 bg-background text-text-secondary">
+                  Or continue with
+                </span>
+              </div>
+            </div>
+
+            {/* Social Login Buttons */}
+            <div className="grid grid-cols-3 gap-4">
+              {/* Google */}
+              <button
+                type="button"
+                className="h-11 rounded-lg border border-border bg-card hover:bg-gray-800 transition-colors flex items-center justify-center"
+              >
+                <span className="text-lg font-bold bg-gradient-to-r from-blue-500 via-red-500 to-yellow-500 bg-clip-text text-transparent">
+                  G
+                </span>
+              </button>
+
+              {/* Microsoft */}
+              <button
+                type="button"
+                className="h-11 rounded-lg border border-border bg-card hover:bg-gray-800 transition-colors flex items-center justify-center"
+              >
+                <div className="grid grid-cols-2 gap-0.5">
+                  <div className="w-2 h-2 bg-blue-500"></div>
+                  <div className="w-2 h-2 bg-green-500"></div>
+                  <div className="w-2 h-2 bg-yellow-500"></div>
+                  <div className="w-2 h-2 bg-red-500"></div>
+                </div>
+              </button>
+
+              {/* Third Option */}
+              <button
+                type="button"
+                className="h-11 rounded-lg border border-border bg-card hover:bg-gray-800 transition-colors flex items-center justify-center"
+              >
+                <div className="w-5 h-5 rounded-full border-2 border-text-secondary"></div>
+              </button>
+            </div>
             {/* SSL Security Message */}
             <div className="flex items-center justify-center gap-2 text-sm text-text-secondary pt-4">
               <LockIcon className="w-4 h-4" />

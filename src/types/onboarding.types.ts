@@ -6,6 +6,7 @@ export interface AccountDetails {
   businessName: string;
   websiteUrl: string;
   taxId: string;
+  password: string;
 }
 
 export type TaxValidationStatus = 'idle' | 'loading' | 'success' | 'failed' | 'pending';
