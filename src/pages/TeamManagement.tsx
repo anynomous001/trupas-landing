@@ -77,7 +77,7 @@ export const TeamManagement = (): JSX.Element => {
       last_name: data.last_name,
       role_id: data.role,
       assigned_location_ids: data.locations,
-      assigned_terminal_ids: [], // Updated from assigned_device_ids
+      assigned_terminal_ids: [],
       custom_message: `Hi ${data.first_name}, you've been invited to join our team on TruePas.`
     }).then(res => {
       if (res.success) {
