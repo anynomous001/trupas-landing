@@ -77,15 +77,41 @@ export const MemberDetails = (): JSX.Element => {
     }
   };
 
-  const handleSaveMember = (data: any) => {
-    // Refresh data after save
-    window.location.reload();
+  const handleSaveMember = async (data: any) => {
+    if (!member) return;
+    try {
+      setIsLoading(true);
+      const response = await teamService.updateMemberDetails(member.memberId, data);
+      if (response.success) {
+        // Reload to show changes
+        window.location.reload();
+      } else {
+        setError(response.message || 'Failed to update member');
+        setIsLoading(false);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to update member');
+      setIsLoading(false);
+    }
   };
 
-  const handleDeactivateMember = () => {
-    // For now, just log or refresh
-    console.log('Member deactivated:', member?.memberId);
-    window.location.reload();
+  const handleDeactivateMember = async () => {
+    if (!member) return;
+    try {
+      setIsLoading(true);
+      const response = await teamService.removeMember(member.memberId, {
+        reason: 'Deactivated by administrator'
+      });
+      if (response.success) {
+        window.location.reload();
+      } else {
+        setError(response.message || 'Failed to deactivate member');
+        setIsLoading(false);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to deactivate member');
+      setIsLoading(false);
+    }
   };
 
   if (isLoading) {

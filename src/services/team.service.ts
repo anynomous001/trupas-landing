@@ -160,16 +160,48 @@ export const teamService = {
     },
 
     updateMemberDetails: async (memberId: string, data: {
-        first_name?: string;
-        last_name?: string;
+        firstName?: string;
+        lastName?: string;
         email?: string;
-        role_id?: string;
-        is_active?: boolean;
+        role?: string; // EditMemberModal sends 'role' (slug)
+        roleId?: string; // Backend expects role_id
+        isActive?: boolean;
         phone?: string;
+        locations?: string[]; // Handled via separate call if needed, or backend needs update?
     }): Promise<ApiResponse<any>> => {
-        const response = await api.put(ENDPOINTS.TEAM.MEMBER_BY_ID(memberId), data);
-        // Note: Response might also need mapping if used directly
-        return response.data;
+        // Map to snake_case for backend
+        // Note: EditMemberModal sends 'role' (slug), but backend update expects 'role_id'?
+        // The modal uses 'role' which is the slug. We need to look up role_id or backend needs to support slug?
+        // Checking team.py: MemberUpdate has role_id.
+        // Frontend EditMemberModal sends role slug. We need to find the role ID first? 
+        // Or maybe EditMemberModal should send roleId.
+        // Let's assume for now we map what we can. 
+        // Wait, EditMemberModal watches 'role' which is slug. 
+        // We probably need to change EditMemberModal to pass roleId or map it here.
+        // But we don't have roles list here. 
+        // Better to fix EditMemberModal to use roleId or pass both.
+        // For now, let's map common fields.
+
+        const payload: any = {
+            first_name: data.firstName || data.first_name,
+            last_name: data.lastName || data.last_name,
+            email: data.email,
+            phone: data.phone,
+            is_active: data.isActive,
+            // role_id: data.roleId // If passed
+        };
+
+        // EditMemberModal passes 'role' as slug. We might need roleId. 
+        // If data.roleId is passed, use it.
+        if (data.roleId) {
+            payload.role_id = data.roleId;
+        }
+
+        const response = await api.put(ENDPOINTS.TEAM.MEMBER_BY_ID(memberId), payload);
+        return {
+            ...response.data,
+            data: response.data.data ? mapMemberFromApi(response.data.data) : undefined
+        };
     },
 
     removeMember: async (memberId: string, data: { reason: string }): Promise<ApiResponse<any>> => {

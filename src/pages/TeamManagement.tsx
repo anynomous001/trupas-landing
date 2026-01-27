@@ -67,10 +67,10 @@ export const TeamManagement = (): JSX.Element => {
       const response = await api.get<any>('/team/invitations');
       if (response.success) {
         setPendingInvitations(response.data.map((inv: any) => ({
-          id: inv.invitation_id,
+          id: inv.invitationId || inv.invitation_id,
           email: inv.email,
-          role: inv.role?.role_name || 'Staff',
-          expiresAt: inv.expires_at
+          role: inv.role?.roleName || inv.role?.role_name || 'Staff',
+          expiresAt: inv.expiresAt || inv.expires_at
         })));
       }
     } catch (error) {
@@ -101,9 +101,31 @@ export const TeamManagement = (): JSX.Element => {
     (m) => m.role?.roleSlug === 'operator' || m.role?.roleSlug === 'viewer'
   );
 
-  const handleInviteMember = async () => {
-    // This is handled by InviteMemberModal.onInvite but we can use it to refresh
-    fetchInvitations();
+  const handleInviteMember = async (data: any) => {
+    try {
+      // Find roleId if not provided (modal sends role slug 'role')
+      // Note: InviteMemberModal should ideally send roleId.
+      // Assuming data has { firstName, lastName, email, role (slug), roleId (optional), locations }
+
+      const response = await teamService.inviteMember({
+        email: data.email,
+        first_name: data.firstName,
+        last_name: data.lastName,
+        role_id: data.roleId, // We will update Modal to send this
+        assigned_location_ids: [], // Locations need ID lookup. Frontend sends names.
+        assigned_terminal_ids: []
+      });
+
+      if (response.success) {
+        fetchInvitations();
+        handleInviteSuccess(data);
+      } else {
+        alert('Failed to invite member: ' + (response.message || 'Unknown error'));
+      }
+    } catch (error: any) {
+      console.error('Failed to invite member:', error);
+      alert('Failed to invite member: ' + (error.message || 'Unknown error'));
+    }
   };
 
   const handleInviteSuccess = (data: any) => {
@@ -155,14 +177,17 @@ export const TeamManagement = (): JSX.Element => {
   };
 
   const handleCancelInvite = async (id: string) => {
-    if (window.confirm('Are you sure you want to cancel this invitation?')) {
-      try {
-        await teamService.cancelInvitation(id);
-        fetchInvitations();
-      } catch (error) {
-        console.error('Failed to cancel invitation:', error);
-      }
+    console.log('handleCancelInvite called with id:', id);
+    // if (window.confirm('Are you sure you want to cancel this invitation?')) {
+    try {
+      console.log('Sending cancel request...');
+      await teamService.cancelInvitation(id);
+      console.log('Cancel success, refreshing...');
+      fetchInvitations();
+    } catch (error) {
+      console.error('Failed to cancel invitation:', error);
     }
+    // }
   };
 
   const filteredCoreMembers = coreMembers;

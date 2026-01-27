@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
@@ -36,6 +36,8 @@ const MOCK_LOCATIONS = [
 ];
 
 const inviteMemberSchema = z.object({
+  firstName: z.string().min(1, 'First name is required'),
+  lastName: z.string().min(1, 'Last name is required'),
   email: z.string().email('Invalid email address'),
   role: z.string().min(1, 'Role is required'),
 });
@@ -45,10 +47,9 @@ type InviteMemberFormData = z.infer<typeof inviteMemberSchema>;
 interface InviteMemberModalProps {
   open: boolean;
   onClose: () => void;
-  onInvite: (data: InviteMemberFormData & { locations: string[] }) => void;
-  onSuccess?: (data: InviteMemberFormData & { locations: string[] }) => void;
+  onInvite: (data: InviteMemberFormData & { locations: string[]; roleId?: string }) => void;
+  onSuccess?: (data: InviteMemberFormData & { locations: string[]; roleId?: string }) => void;
 }
-
 
 
 export const InviteMemberModal = ({
@@ -71,20 +72,20 @@ export const InviteMemberModal = ({
   const {
     register,
     handleSubmit,
-    setValue,
-    watch,
+    control,
     reset,
     formState: { errors },
   } = useForm<InviteMemberFormData>({
     resolver: zodResolver(inviteMemberSchema),
     defaultValues: {
+      firstName: '',
+      lastName: '',
       email: '',
-      role: 'operator',
+      role: '',
     },
   });
 
-  const selectedRole = watch('role');
-  const selectedRoleData = availableRoles.find((r) => r.roleSlug === selectedRole);
+
 
   useEffect(() => {
     const loadRoles = async () => {
@@ -99,27 +100,6 @@ export const InviteMemberModal = ({
     };
     loadRoles();
   }, []);
-
-  // ... (omitting unchanged parts for brevity if possible, but replace_file_content needs contiguous block. I'll target specific blocks if I can, but here the changes are scattered. I will do one large block covering the component body or split it)
-
-  // Actually, I can do multiple replacements if `multi_replace_file_content` is used, but for now I will stick to `replace_file_content` for the whole file or large chunks if I am confident.
-  // Let's use `multi_replace_file_content` for `InviteMemberModal.tsx` since changes are in `selectedRoleData` logic and the JSX rendering. 
-
-
-  // Reset form when modal opens/closes
-  useEffect(() => {
-    if (open) {
-      reset({
-        email: '',
-        role: 'operator',
-      });
-      setLocations([]);
-      setLocationInput('');
-      setIsRoleDropdownOpen(false);
-      setIsLocationDropdownOpen(false);
-      setFilteredLocations(MOCK_LOCATIONS);
-    }
-  }, [open, reset]);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -189,23 +169,49 @@ export const InviteMemberModal = ({
     setLocations(locations.filter((loc) => loc !== locationToRemove));
   };
 
+  // Reset form when modal opens/closes
+  useEffect(() => {
+    if (open) {
+      reset({
+        firstName: '',
+        lastName: '',
+        email: '',
+        role: 'operator',
+      });
+      setLocations([]);
+      // ...
+    }
+  }, [open, reset]);
+
   const onSubmit = async (data: InviteMemberFormData) => {
     setIsSending(true);
-    // Simulate API call delay
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    const invitationData = { ...data, locations };
-    onInvite(invitationData);
+
+    const invitationData = {
+      ...data,
+      locations,
+      roleId: data.role // data.role is now the roleId
+    };
+
+    // Pass to parent handler which does the API call
+    if (onInvite) {
+      await onInvite(invitationData as any);
+    }
+
     setIsSending(false);
-    // Close this modal and trigger success callback
     handleClose();
     if (onSuccess) {
-      onSuccess(invitationData);
+      onSuccess(invitationData as any);
     }
   };
 
   const handleClose = () => {
     if (!isSending) {
-      reset();
+      reset({
+        firstName: '',
+        lastName: '',
+        email: '',
+        role: 'operator',
+      });
       setLocations([]);
       setLocationInput('');
       setIsRoleDropdownOpen(false);
@@ -222,7 +228,40 @@ export const InviteMemberModal = ({
       title="Invite Member"
       className="max-w-2xl"
     >
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 mt-4">
+      <form
+        onSubmit={handleSubmit(onSubmit, (errors) => console.error("InviteMemberModal: Form validation failed", errors))}
+        className="space-y-6 mt-4"
+      >
+        {/* Name Fields */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-semibold text-text-secondary uppercase mb-2">
+              FIRST NAME
+            </label>
+            <Input
+              {...register('firstName')}
+              placeholder="Alex"
+              className={cn(errors.firstName && 'border-red-500')}
+            />
+            {errors.firstName && (
+              <p className="text-xs text-red-500 mt-1">{errors.firstName.message}</p>
+            )}
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-text-secondary uppercase mb-2">
+              LAST NAME
+            </label>
+            <Input
+              {...register('lastName')}
+              placeholder="Sterling"
+              className={cn(errors.lastName && 'border-red-500')}
+            />
+            {errors.lastName && (
+              <p className="text-xs text-red-500 mt-1">{errors.lastName.message}</p>
+            )}
+          </div>
+        </div>
+
         {/* Email Address */}
         <div>
           <label className="block text-xs font-semibold text-text-secondary uppercase mb-2">
@@ -247,54 +286,71 @@ export const InviteMemberModal = ({
           <label className="block text-xs font-semibold text-text-secondary uppercase mb-2">
             ROLE & PERMISSIONS
           </label>
-          <div className="relative" ref={roleDropdownRef}>
-            <button
-              type="button"
-              onClick={() => setIsRoleDropdownOpen(!isRoleDropdownOpen)}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-lg border border-border bg-card text-text-primary hover:border-primary/50 transition-colors"
-            >
-              <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-                <Shield className="w-4 h-4 text-primary" />
-              </div>
-              <span className="flex-1 text-left">{selectedRoleData?.roleName || 'Select Role'}</span>
+          <Controller
+            name="role"
+            control={control}
+            render={({ field }) => {
+              const currentRoleData = availableRoles.find((r) => r.roleId === field.value);
 
-              <ChevronDown
-                size={16}
-                className={cn(
-                  'text-text-secondary transition-transform',
-                  isRoleDropdownOpen && 'rotate-180'
-                )}
-              />
-            </button>
-            {isRoleDropdownOpen && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-card dark:bg-black dark:border-white/10 border border-border rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto">
-                {availableRoles.map((role) => (
+              return (
+                <div className="relative" ref={roleDropdownRef}>
                   <button
-                    key={role.roleId}
                     type="button"
                     onClick={() => {
-                      setValue('role', role.roleSlug);
-                      setIsRoleDropdownOpen(false);
+                      setIsRoleDropdownOpen(!isRoleDropdownOpen)
                     }}
                     className={cn(
-                      'w-full flex items-center gap-3 px-4 py-3 hover:bg-background transition-colors',
-                      selectedRole === role.roleSlug && 'bg-background'
+                      "w-full flex items-center gap-3 px-4 py-3 rounded-lg border bg-card text-text-primary hover:border-primary/50 transition-colors",
+                      errors.role ? "border-red-500" : "border-border"
                     )}
                   >
                     <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
                       <Shield className="w-4 h-4 text-primary" />
                     </div>
-                    <div className="flex-1 text-left">
-                      <p className="text-sm font-medium text-text-primary">{role.roleName}</p>
-                      <p className="text-xs text-text-secondary truncate">{role.description}</p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-            <p className="text-xs text-text-secondary mt-2">{selectedRoleData?.description}</p>
+                    <span className="flex-1 text-left">{currentRoleData?.roleName || 'Select Role'}</span>
 
-          </div>
+                    <ChevronDown
+                      size={16}
+                      className={cn(
+                        'text-text-secondary transition-transform',
+                        isRoleDropdownOpen && 'rotate-180'
+                      )}
+                    />
+                  </button>
+                  {isRoleDropdownOpen && (
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-card dark:bg-black dark:border-white/10 border border-border rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto">
+                      {availableRoles.map((role) => (
+                        <button
+                          key={role.roleId}
+                          type="button"
+                          onClick={() => {
+                            field.onChange(role.roleId);
+                            setIsRoleDropdownOpen(false);
+                          }}
+                          className={cn(
+                            'w-full flex items-center gap-3 px-4 py-3 hover:bg-background transition-colors',
+                            field.value === role.roleId && 'bg-background'
+                          )}
+                        >
+                          <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                            <Shield className="w-4 h-4 text-primary" />
+                          </div>
+                          <div className="flex-1 text-left">
+                            <p className="text-sm font-medium text-text-primary">{role.roleName}</p>
+                            <p className="text-xs text-text-secondary truncate">{role.description}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  <p className="text-xs text-text-secondary mt-2">{currentRoleData?.description}</p>
+                  {errors.role && (
+                    <p className="text-xs text-red-500 mt-1">{errors.role.message}</p>
+                  )}
+                </div>
+              );
+            }}
+          />
         </div>
 
         {/* Assigned Locations */}

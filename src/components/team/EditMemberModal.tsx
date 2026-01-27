@@ -165,7 +165,12 @@ export const EditMemberModal = ({
     setIsSaving(true);
     // Simulate API call delay
     await new Promise((resolve) => setTimeout(resolve, 1500));
-    onSave({ ...data, locations });
+    const selectedRoleObj = availableRoles.find(r => r.roleSlug === data.role);
+    onSave({
+      ...data,
+      roleId: selectedRoleObj?.roleId, // Pass roleId
+      locations
+    } as any);
     setIsSaving(false);
     onClose();
   };
