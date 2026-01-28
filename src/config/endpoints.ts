@@ -6,6 +6,7 @@ export const ENDPOINTS = {
         SUMMARY: '/api/v1/dashboard/summary',
         LOCATION_PERFORMANCE: '/api/v1/dashboard/location-performance',
         SYSTEM_ALERTS: '/api/v1/dashboard/system-alerts',
+        QUICK_STATS: '/api/v1/dashboard/quick-stats',
     },
     LOCATIONS: {
         BASE: '/api/v1/locations',
