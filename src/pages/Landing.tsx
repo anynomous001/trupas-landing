@@ -1,325 +1,453 @@
-import { useState } from 'react';
-import {
-  CheckCircle2,
-  Smartphone,
-  MapPin,
-  Users,
-  Shield,
-  BarChart3,
-  ChevronDown,
-  ArrowRight,
-  Zap,
-  Lock,
-  Bell,
-} from 'lucide-react';
-import { Button } from '../components/ui/Button';
-import { cn } from '../lib/utils';
+import { useState, useEffect, useRef } from 'react';
+import { Kiosk } from '../components/landing/Kiosk';
+import { Dashboard } from '../components/landing/Dashboard';
+import type { DashView } from '../components/landing/Dashboard';
 
-const faqs = [
-  {
-    id: '1',
-    question: 'How do I pair a new TruePas terminal?',
-    answer:
-      'Navigate to Device Hub in your dashboard, click "Add Device", and follow the on-screen steps. Enter the terminal serial number and assign it to a location. Once paired, it appears in your device list and is ready to configure.',
-  },
-  {
-    id: '2',
-    question: 'What happens if a user fails ID verification?',
-    answer:
-      'Failed attempts are flagged as "High Risk" and logged in the Verifications Log. The user is prompted to retry with a clearer image or alternative ID. Common causes are glare, blurriness, or an expired document.',
-  },
-  {
-    id: '3',
-    question: 'How do I add a new team member?',
-    answer:
-      'Go to Team Management and click "Invite Member". Enter their email, choose a role (Admin, Manager, or Staff), and optionally restrict them to specific locations. They receive an invitation link valid for 7 days.',
-  },
-  {
-    id: '4',
-    question: 'Can I enforce 2FA for all staff?',
-    answer:
-      'Yes. Go to Settings → Account Security and enable mandatory 2FA. All users will be required to set it up on their next login. You can monitor 2FA status per user from the Team Management page.',
-  },
-  {
-    id: '5',
-    question: 'Where can I download monthly invoices?',
-    answer:
-      'Invoices are available under Settings → Billing. They are generated on the first of each month in PDF format. You can also enable email notifications to receive them automatically.',
-  },
+// ─── Data ───────────────────────────────────────────────────────────────────
+
+const FEATURES: { view: DashView; title: string; body: string }[] = [
+  { view: 'overview', title: 'One place for everything.', body: 'Kiosks, terminals, locations and team members live in a single console. No tab-jumping, no duplicate dashboards.' },
+  { view: 'ids',      title: 'Reads any ID, on any door.', body: '200+ document types, glare-tolerant, with manual override for the edge cases. Match rate stays above 99%.' },
+  { view: 'sync',     title: 'Real-time sync, every site.', body: 'Every device heartbeats every 5 seconds. See exactly what is online, where, and how it has been performing.' },
+  { view: 'audit',    title: 'An audit trail you can hand to a regulator.', body: 'Every read is logged with photo, timestamp, location and operator. Exportable. Tamper-evident. Quiet by default.' },
+  { view: 'alerts',   title: 'Alerts that are worth the ping.', body: 'Tamper, offline, repeat-flag, watchlist match. No noisy thresholds — only events you would have wanted woken for.' },
+  { view: 'team',     title: 'Roles and handoffs, no spreadsheet.', body: 'Permissions per location, shift handoffs, and a clear record of who was on the door when something happened.' },
 ];
 
-const features = [
-  {
-    icon: CheckCircle2,
-    title: 'Automated ID Verification',
-    description:
-      'Real-time identity checks at every kiosk. Our system instantly validates documents and flags anomalies so your staff never has to guess.',
-  },
-  {
-    icon: MapPin,
-    title: 'Multi-Location Management',
-    description:
-      'Manage every venue from a single dashboard. View live check-in data, terminal health, and alerts across all your locations at once.',
-  },
-  {
-    icon: Smartphone,
-    title: 'Device Hub',
-    description:
-      'Pair, monitor, and manage kiosks, tablets, and handheld scanners with ease. Get real-time status, firmware updates, and battery alerts.',
-  },
-  {
-    icon: Users,
-    title: 'Role-Based Team Access',
-    description:
-      'Invite staff with granular permissions. Assign Admins, Managers, or limited Staff roles scoped to specific locations.',
-  },
-  {
-    icon: BarChart3,
-    title: 'Live Analytics',
-    description:
-      'Track check-in volume, success rates, and trends in real time. Weekly comparisons give you the context to act fast.',
-  },
-  {
-    icon: Shield,
-    title: 'Enterprise Security',
-    description:
-      'Enforce 2FA for all users, get full audit logs, and meet compliance requirements out of the box.',
-  },
+const STEPS = [
+  { state: 'idle'    as const, title: 'Plug it in.',     body: 'Mount, power, network. Out of the box to your first scan in under an hour.' },
+  { state: 'scan'    as const, title: 'They scan.',      body: 'Customer or visitor places ID in the frame. Kiosk reads, captures a photo, and starts verification.' },
+  { state: 'verify'  as const, title: 'You verify.',     body: 'Match against ID + face, check age and watchlist, surface any flags. Operator can override in the moment.' },
+  { state: 'success' as const, title: 'Everyone moves.', body: 'Logged, synced, audit-ready. Median time at the door: 2.1 seconds.' },
 ];
 
-const steps = [
-  {
-    number: '01',
-    title: 'Create your merchant account',
-    description: 'Sign up and onboard your business in minutes. No technical setup required.',
-  },
-  {
-    number: '02',
-    title: 'Add your locations & devices',
-    description: 'Register your venues and pair your TruePas kiosks or terminals in a few clicks.',
-  },
-  {
-    number: '03',
-    title: 'Invite your team',
-    description: 'Set roles and permissions for each staff member across any location.',
-  },
-  {
-    number: '04',
-    title: 'Go live',
-    description: 'Your kiosks start verifying IDs instantly. Monitor everything from the dashboard.',
-  },
+const SCENES = [
+  { cls: '',   tag: 'Hospitality', label: 'Hotel lobby · 3am check-in', title: "A reception desk that doesn't blink at 3am.", body: 'Front-of-house teams handle late arrivals without paging a manager. ID, age, and reservation match in one tap.' },
+  { cls: 's2', tag: 'Retail · Dispensary', label: 'Compliance window', title: 'Compliance, without the side-eye.', body: 'Age-restricted retail moves the awkward part to the kiosk. Customers self-verify; staff get a clean log for the regulator.' },
+  { cls: 's3', tag: 'Corporate', label: 'Office front desk', title: 'Visitors who feel expected.', body: 'Pre-registered visitors badge in by ID. Hosts get a heads-up. Security gets the audit. No clipboards.' },
 ];
 
-export const Landing = (): React.JSX.Element => {
-  const [openFaq, setOpenFaq] = useState<string | null>(null);
+const FAQ_ITEMS = [
+  { q: "What's in the box?", a: "Trupas T1 kiosk, anchored desk mount, power brick, network cable, and the setup card. SIM tray for cellular failover is included on the Plus tier." },
+  { q: "Do I need a network at the door?", a: "Wired ethernet is preferred. Wi-Fi works. Cellular failover keeps the door working through outages, and the device caches up to 72 hours of activity offline." },
+  { q: "How long does setup take?", a: "Most customers go from unboxed to verifying in under an afternoon. Mount, plug, pair to your account, set roles. We'll stay on the call." },
+  { q: "Which IDs does it accept?", a: "200+ document types — US/EU/CA driver licenses and passports out of the box. The list updates monthly. Manual override is always available." },
+  { q: "How is the data stored?", a: "Encrypted at rest and in transit. SOC 2 Type II. Logs and photos are retained per your policy — defaults follow the strictest of your jurisdictions." },
+  { q: "What does it cost?", a: "Hardware is a one-time cost; software is per-location, per-month. No per-scan fees. Talk to us about volume — we're not coy about pricing." },
+];
 
-  const toggleFaq = (id: string) => {
-    setOpenFaq(openFaq === id ? null : id);
-  };
+// ─── Section Components ──────────────────────────────────────────────────────
+
+function Nav() {
+  return (
+    <nav className="nav wrap">
+      <a className="brand" href="/">
+        <span className="mark">T</span>
+        Trupas
+      </a>
+      <div className="links">
+        <a href="#device">Device</a>
+        <a href="#features">Software</a>
+        <a href="#how">How it works</a>
+        <a href="#use">Industries</a>
+      </div>
+      <div className="right">
+        <a className="signin" href="/login">Sign in</a>
+        <a className="btn primary" href="/login">Get started <span className="ar">→</span></a>
+      </div>
+    </nav>
+  );
+}
+
+function Hero() {
+  return (
+    <section className="hero wrap" style={{ borderBottom: 'none', paddingBottom: '48px' }}>
+      <div>
+        <span className="eyebrow">
+          <span className="dot" />
+          Hardware + software · v1 shipping now
+        </span>
+        <h1>
+          Built for<br />
+          the <span className="accent-word">front</span> desk.
+        </h1>
+        <p className="lede">
+          A purpose-built kiosk and a dashboard that keeps every door honest. One place for kiosks,
+          terminals, locations, and team members — calm enough to forget, sharp enough to catch what matters.
+        </p>
+        <div className="ctas">
+          <a className="btn primary lg" href="/login">Get started <span className="ar">→</span></a>
+          <a className="btn lg" href="#how">How it works</a>
+        </div>
+        <div className="trust">
+          <span className="pill">✓ no credit card</span>
+          <span className="pill">✓ SOC 2 Type II</span>
+          <span className="pill">✓ 24/7 monitoring</span>
+        </div>
+      </div>
+      <div className="hero-stage">
+        <Kiosk state="scan" callouts={true} />
+      </div>
+    </section>
+  );
+}
+
+function DeviceTour() {
+  const cards = [
+    {
+      tag: 'ID reader',
+      title: 'Reads any ID.',
+      body: 'Driver licenses, passports, residency cards — front and back, glare-tolerant, NFC where the chip allows.',
+      meta: ['200+ document types', '99.1% match rate'],
+    },
+    {
+      tag: 'Offline mode',
+      title: 'Works offline.',
+      body: 'Local cache + rolling re-sync. The lobby keeps working when the WAN does not. Reconciles in seconds when it returns.',
+      meta: ['72h offline buffer', 'rolling re-sync'],
+    },
+    {
+      tag: 'Tamper guard',
+      title: 'Locks down on tamper.',
+      body: 'Anchored to the desk. Accelerometer + cover sensor. If it moves or opens, it shuts itself and pings you in under a second.',
+      meta: ['<1s alert', 'cover + base sensor'],
+    },
+  ];
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <section id="device" className="wrap">
+      <div className="sec-h">
+        <span className="sec-num">02</span>
+        <h2 className="sec-title">A terminal that does the boring parts well.</h2>
+        <span className="sec-sub">device tour</span>
+      </div>
+      <div className="tour-grid">
+        {cards.map((c) => (
+          <div className="tour-card" key={c.tag}>
+            <div className="shot"><span className="tag">{c.tag}</span></div>
+            <h3>{c.title}</h3>
+            <p>{c.body}</p>
+            <div className="meta"><span>{c.meta[0]}</span><span>{c.meta[1]}</span></div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
 
-      {/* ── NAVBAR ── */}
-      <header className="sticky top-0 z-50 border-b border-border bg-white/80 dark:bg-[#0f1013]/80 backdrop-blur-md">
-        <div className="container mx-auto px-6 lg:px-8 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded bg-primary flex items-center justify-center">
-              <CheckCircle2 className="w-5 h-5 text-white" />
+function StickyFeatures({
+  activeIdx,
+  setActive,
+  featureRefs,
+}: {
+  activeIdx: number;
+  setActive: (i: number) => void;
+  featureRefs: React.MutableRefObject<(HTMLDivElement | null)[]>;
+}) {
+  const view = FEATURES[activeIdx]?.view ?? 'overview';
+
+  return (
+    <section id="features" className="wrap">
+      <div className="sec-h">
+        <span className="sec-num">03</span>
+        <h2 className="sec-title">The dashboard that knows what's happening.</h2>
+        <span className="sec-sub">scroll · 6 features</span>
+      </div>
+      <div className="sticky-row">
+        <div className="sticky-left">
+          <Dashboard view={view} />
+        </div>
+        <div className="feature-list">
+          {FEATURES.map((f, i) => (
+            <div
+              key={i}
+              ref={(el) => { featureRefs.current[i] = el; }}
+              className={`feature-row${i === activeIdx ? ' active' : ''}`}
+              onClick={() => setActive(i)}
+            >
+              <div className="num">0{i + 1}</div>
+              <div>
+                <h4>{f.title}</h4>
+                <p>{f.body}</p>
+              </div>
             </div>
-            <span className="text-xl font-bold text-text-primary">TruePas</span>
-          </div>
-          <nav className="hidden md:flex items-center gap-8">
-            <a href="#features" className="text-sm text-text-secondary hover:text-text-primary transition-colors">Features</a>
-            <a href="#how-it-works" className="text-sm text-text-secondary hover:text-text-primary transition-colors">How it works</a>
-            <a href="#faq" className="text-sm text-text-secondary hover:text-text-primary transition-colors">FAQ</a>
-          </nav>
-          <a href="/login">
-            <Button variant="outline" size="sm">Sign In</Button>
-          </a>
+          ))}
         </div>
-      </header>
+      </div>
+    </section>
+  );
+}
 
-      {/* ── HERO ── */}
-      <section className="flex-1 flex items-center justify-center px-6 lg:px-8 py-24 lg:py-32">
-        <div className="max-w-4xl text-center space-y-8">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-border bg-card text-sm text-text-secondary">
-            <Zap className="w-4 h-4 text-primary" />
-            Trusted by merchants across the US
-          </div>
-          <h1 className="text-5xl lg:text-6xl font-bold text-text-primary leading-tight">
-            Identity verification,{' '}
-            <span className="text-primary">finally built</span>{' '}
-            for merchants
-          </h1>
-          <p className="text-xl text-text-secondary max-w-2xl mx-auto leading-relaxed">
-            TruePas gives you a single dashboard to manage ID check-ins across every location, terminal, and team member — in real time.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <a href="/login">
-              <Button size="lg" className="gap-2">
-                Get started free <ArrowRight className="w-5 h-5" />
-              </Button>
-            </a>
-            <a href="#how-it-works">
-              <Button size="lg" variant="outline">See how it works</Button>
-            </a>
-          </div>
-          <div className="flex items-center justify-center gap-8 pt-4 text-sm text-text-secondary">
-            <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-primary" /> No credit card required</span>
-            <span className="flex items-center gap-1.5"><Lock className="w-4 h-4 text-primary" /> SOC 2 compliant</span>
-            <span className="flex items-center gap-1.5"><Bell className="w-4 h-4 text-primary" /> 24/7 monitoring</span>
-          </div>
+function HowItWorks({
+  stepIdx,
+  setStep,
+  stepRefs,
+}: {
+  stepIdx: number;
+  setStep: (i: number) => void;
+  stepRefs: React.MutableRefObject<(HTMLDivElement | null)[]>;
+}) {
+  const currentState = STEPS[stepIdx]?.state ?? 'idle';
+
+  return (
+    <section id="how" className="wrap">
+      <div className="sec-h">
+        <span className="sec-num">04</span>
+        <h2 className="sec-title">Unbox to verifying — in an afternoon.</h2>
+        <span className="sec-sub">4 steps</span>
+      </div>
+      <div className="how-row">
+        <div className="how-sticky">
+          <Kiosk state={currentState} callouts={false} label="Trupas T1" />
         </div>
-      </section>
-
-      {/* ── FEATURES ── */}
-      <section id="features" className="py-24 px-6 lg:px-8 bg-card/50">
-        <div className="container mx-auto max-w-6xl">
-          <div className="text-center space-y-4 mb-16">
-            <h2 className="text-3xl lg:text-4xl font-bold text-text-primary">
-              Everything you need to run compliant check-ins
-            </h2>
-            <p className="text-lg text-text-secondary max-w-2xl mx-auto">
-              From kiosk management to team permissions, TruePas covers the full stack.
-            </p>
-          </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {features.map((feature) => (
-              <div
-                key={feature.title}
-                className="p-6 rounded-xl border border-border bg-card hover:border-primary/40 transition-colors"
-              >
-                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                  <feature.icon className="w-5 h-5 text-primary" />
-                </div>
-                <h3 className="text-base font-semibold text-text-primary mb-2">{feature.title}</h3>
-                <p className="text-sm text-text-secondary leading-relaxed">{feature.description}</p>
+        <div className="how-list">
+          {STEPS.map((st, i) => (
+            <div
+              key={i}
+              ref={(el) => { stepRefs.current[i] = el; }}
+              className={`how-step${i === stepIdx ? ' active' : ''}`}
+              onClick={() => setStep(i)}
+            >
+              <div className="num-circle">{i + 1}</div>
+              <div>
+                <h4>{st.title}</h4>
+                <p>{st.body}</p>
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
-      </section>
+      </div>
+    </section>
+  );
+}
 
-      {/* ── HOW IT WORKS ── */}
-      <section id="how-it-works" className="py-24 px-6 lg:px-8">
-        <div className="container mx-auto max-w-4xl">
-          <div className="text-center space-y-4 mb-16">
-            <h2 className="text-3xl lg:text-4xl font-bold text-text-primary">
-              Up and running in under an hour
-            </h2>
-            <p className="text-lg text-text-secondary">
-              Simple setup, zero downtime.
-            </p>
-          </div>
-          <div className="space-y-8">
-            {steps.map((step) => (
-              <div key={step.number} className="flex gap-6 items-start">
-                <div className="flex-shrink-0 w-12 h-12 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center">
-                  <span className="text-sm font-bold text-primary">{step.number}</span>
-                </div>
-                <div className="flex-1 pb-8 border-b border-border last:border-0 last:pb-0">
-                  <h3 className="text-lg font-semibold text-text-primary mb-1">{step.title}</h3>
-                  <p className="text-text-secondary">{step.description}</p>
-                </div>
+function UseCases({ slide, setSlide }: { slide: number; setSlide: (n: number) => void }) {
+  return (
+    <section id="use" className="wrap">
+      <div className="sec-h">
+        <span className="sec-num">05</span>
+        <h2 className="sec-title">Wherever the door matters.</h2>
+        <span className="sec-sub">3 industries</span>
+      </div>
+      <div className="carousel">
+        <div className="carousel-track" style={{ transform: `translateX(-${slide * 100}%)` }}>
+          {SCENES.map((s, i) => (
+            <div key={i} className={`carousel-slide${s.cls ? ' ' + s.cls : ''}`}>
+              <span className="scene-tag">{s.label}</span>
+              <div className="carousel-card">
+                <div className="label">{s.tag}</div>
+                <h3>{s.title}</h3>
+                <p>{s.body}</p>
+                <a className="read" href="#">Read story <span className="ar">→</span></a>
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
-      </section>
-
-      {/* ── USE CASES ── */}
-      <section className="py-24 px-6 lg:px-8 bg-card/50">
-        <div className="container mx-auto max-w-6xl">
-          <div className="text-center space-y-4 mb-16">
-            <h2 className="text-3xl lg:text-4xl font-bold text-text-primary">Built for your industry</h2>
-            <p className="text-lg text-text-secondary max-w-2xl mx-auto">
-              TruePas adapts to any business that needs reliable, fast identity verification at point of entry.
-            </p>
-          </div>
-          <div className="grid md:grid-cols-3 gap-6">
-            {[
-              { title: 'Hospitality & Events', desc: 'Verify guests at check-in, control access by age or membership tier, and keep a full audit trail.' },
-              { title: 'Retail & Dispensaries', desc: 'Age-gate purchases instantly at the kiosk. Stay compliant without slowing down the checkout line.' },
-              { title: 'Corporate & Co-working', desc: 'Manage visitor check-ins across multiple offices with role-based access for your reception team.' },
-            ].map((uc) => (
-              <div key={uc.title} className="p-6 rounded-xl border border-border bg-card">
-                <h3 className="text-base font-semibold text-text-primary mb-2">{uc.title}</h3>
-                <p className="text-sm text-text-secondary leading-relaxed">{uc.desc}</p>
-              </div>
-            ))}
-          </div>
+      </div>
+      <div className="carousel-controls">
+        <div className="c-dots">
+          {SCENES.map((_, i) => (
+            <button
+              key={i}
+              className={`c-dot${i === slide ? ' active' : ''}`}
+              onClick={() => setSlide(i)}
+              aria-label={`Slide ${i + 1}`}
+            />
+          ))}
         </div>
-      </section>
+        <div className="chevs">
+          <button className="chev" onClick={() => setSlide((slide - 1 + SCENES.length) % SCENES.length)}>‹</button>
+          <button className="chev" onClick={() => setSlide((slide + 1) % SCENES.length)}>›</button>
+        </div>
+      </div>
+    </section>
+  );
+}
 
-      {/* ── FAQ ── */}
-      <section id="faq" className="py-24 px-6 lg:px-8">
-        <div className="container mx-auto max-w-3xl">
-          <div className="text-center space-y-4 mb-16">
-            <h2 className="text-3xl lg:text-4xl font-bold text-text-primary">Frequently asked questions</h2>
-            <p className="text-lg text-text-secondary">Answers to the most common questions from merchants.</p>
-          </div>
-          <div className="space-y-3">
-            {faqs.map((faq) => (
-              <div
-                key={faq.id}
-                className="border border-border rounded-xl overflow-hidden"
-              >
-                <button
-                  onClick={() => toggleFaq(faq.id)}
-                  className="w-full flex items-center justify-between px-6 py-5 text-left hover:bg-card/60 transition-colors"
+function FaqSection({ openIdx, setOpen }: { openIdx: number; setOpen: (i: number) => void }) {
+  const cols = [FAQ_ITEMS.slice(0, 3), FAQ_ITEMS.slice(3)];
+
+  return (
+    <section className="wrap">
+      <div className="sec-h">
+        <span className="sec-num">06</span>
+        <h2 className="sec-title">The questions hardware buyers actually ask.</h2>
+        <span className="sec-sub">6 questions</span>
+      </div>
+      <div className="faq-grid">
+        {cols.map((col, ci) => (
+          <div key={ci}>
+            {col.map((row, ri) => {
+              const idx = ci * 3 + ri;
+              const open = openIdx === idx;
+              return (
+                <div
+                  key={idx}
+                  className={`faq-row${open ? ' open' : ''}`}
+                  onClick={() => setOpen(open ? -1 : idx)}
                 >
-                  <span className="font-medium text-text-primary">{faq.question}</span>
-                  <ChevronDown
-                    className={cn(
-                      'w-5 h-5 text-text-secondary flex-shrink-0 ml-4 transition-transform duration-200',
-                      openFaq === faq.id && 'rotate-180'
-                    )}
-                  />
-                </button>
-                {openFaq === faq.id && (
-                  <div className="px-6 pb-5 text-text-secondary leading-relaxed border-t border-border bg-card/30">
-                    <p className="pt-4">{faq.answer}</p>
+                  <div className="top">
+                    <div className="q">{row.q}</div>
+                    <div className="toggle">{open ? '−' : '+'}</div>
                   </div>
-                )}
-              </div>
-            ))}
+                  <div className="a">{row.a}</div>
+                </div>
+              );
+            })}
           </div>
-        </div>
-      </section>
+        ))}
+      </div>
+    </section>
+  );
+}
 
-      {/* ── CTA BANNER ── */}
-      <section className="py-20 px-6 lg:px-8 bg-primary">
-        <div className="container mx-auto max-w-3xl text-center space-y-6">
-          <h2 className="text-3xl lg:text-4xl font-bold text-white">Ready to streamline your check-ins?</h2>
-          <p className="text-lg text-white/80">
-            Join merchants who trust TruePas for compliant, real-time identity verification.
+function CtaCard() {
+  return (
+    <section id="cta" className="wrap">
+      <div className="cta-card">
+        <div>
+          <h2>
+            Order a terminal.<br />
+            Verify by <span className="ul">next week</span>.
+          </h2>
+          <p>
+            Most orders ship within 48 hours. Setup is included. Cancel any time in the first
+            90 days — keep the kiosk while we sort it.
           </p>
-          <a href="/login">
-            <Button size="lg" variant="secondary" className="gap-2">
-              Sign in to your portal <ArrowRight className="w-5 h-5" />
-            </Button>
-          </a>
+          <div className="ctas">
+            <a className="btn primary lg" href="/login">Get started <span className="ar">→</span></a>
+            <a className="btn lg" href="#">Talk to sales</a>
+          </div>
         </div>
-      </section>
-
-      {/* ── FOOTER ── */}
-      <footer className="border-t border-border py-10 px-6 lg:px-8">
-        <div className="container mx-auto max-w-6xl flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded bg-primary flex items-center justify-center">
-              <CheckCircle2 className="w-4 h-4 text-white" />
+        <div className="cta-side">
+          <div className="cta-receipt">
+            <div className="r-head">
+              <b>Trupas T1</b>
+              <span>QTY 1</span>
             </div>
-            <span className="font-bold text-text-primary">TruePas</span>
-          </div>
-          <p className="text-sm text-text-secondary">© 2024 TruePas. All rights reserved.</p>
-          <div className="flex gap-6 text-sm text-text-secondary">
-            <a href="#" className="hover:text-text-primary transition-colors">Privacy</a>
-            <a href="#" className="hover:text-text-primary transition-colors">Terms</a>
-            <a href="#" className="hover:text-text-primary transition-colors">Contact</a>
+            <div className="r-row"><span>Kiosk · 10.1"</span><b>$1,290</b></div>
+            <div className="r-row"><span>Desk mount</span><b>incl.</b></div>
+            <div className="r-row"><span>Setup + onboarding</span><b>incl.</b></div>
+            <div className="r-row"><span>Software · per location</span><b>$89/mo</b></div>
+            <div className="r-total"><span>Ships in</span><b>48 hrs</b></div>
+            <div className="r-thank">thank you ✎</div>
           </div>
         </div>
-      </footer>
-    </div>
+      </div>
+    </section>
+  );
+}
+
+function SiteFooter() {
+  return (
+    <footer className="footer wrap">
+      <div className="footer-grid">
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontFamily: 'var(--font-hand)', fontSize: '30px', fontWeight: 700 }}>
+            <span style={{ width: '30px', height: '30px', border: '2px solid var(--ink)', borderRadius: '7px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--ink)', color: 'var(--paper)', fontFamily: 'var(--font-hand)', fontSize: '22px', fontWeight: 700, lineHeight: 1, flexShrink: 0 }}>T</span>
+            Trupas
+          </div>
+          <p className="blurb">Hardware on the floor. Software that knows what's happening on it. Built quietly in Oakland, shipped everywhere.</p>
+        </div>
+        <div>
+          <h5>Product</h5>
+          <ul>
+            <li><a href="#">Kiosk T1</a></li>
+            <li><a href="#">Console</a></li>
+            <li><a href="#">API</a></li>
+            <li><a href="#">Pricing</a></li>
+          </ul>
+        </div>
+        <div>
+          <h5>Industries</h5>
+          <ul>
+            <li><a href="#">Hospitality</a></li>
+            <li><a href="#">Retail</a></li>
+            <li><a href="#">Corporate</a></li>
+            <li><a href="#">Healthcare</a></li>
+          </ul>
+        </div>
+        <div>
+          <h5>Company</h5>
+          <ul>
+            <li><a href="#">About</a></li>
+            <li><a href="#">Security</a></li>
+            <li><a href="#">Customers</a></li>
+            <li><a href="#">Contact</a></li>
+          </ul>
+        </div>
+      </div>
+      <div className="footer-bottom">
+        <span>© 2026 Trupas, Inc. · Wherever the door matters.</span>
+        <span>SOC 2 Type II · GDPR · CCPA</span>
+      </div>
+    </footer>
+  );
+}
+
+// ─── Main Page ───────────────────────────────────────────────────────────────
+
+export const Landing = (): React.JSX.Element => {
+  const [activeFeature, setActiveFeature] = useState(0);
+  const [stepIdx, setStepIdx] = useState(0);
+  const [slide, setSlide] = useState(0);
+  const [openFaq, setOpenFaq] = useState(-1);
+
+  const featureRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const stepRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  useEffect(() => {
+    const onScroll = () => {
+      const vh = window.innerHeight;
+
+      let bestF = 0, bestFD = Infinity;
+      featureRefs.current.forEach((el, i) => {
+        if (!el) return;
+        const r = el.getBoundingClientRect();
+        const dist = Math.abs(r.top + r.height / 2 - vh * 0.45);
+        if (dist < bestFD) { bestFD = dist; bestF = i; }
+      });
+      setActiveFeature(bestF);
+
+      let bestS = 0, bestSD = Infinity;
+      stepRefs.current.forEach((el, i) => {
+        if (!el) return;
+        const r = el.getBoundingClientRect();
+        const dist = Math.abs(r.top + r.height / 2 - vh * 0.45);
+        if (dist < bestSD) { bestSD = dist; bestS = i; }
+      });
+      setStepIdx(bestS);
+    };
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  return (
+    <main>
+      <Nav />
+      <Hero />
+      <div className="squig wrap">· · · · · · · · · ·</div>
+      <DeviceTour />
+      <div className="squig wrap">· · · · · · · · · ·</div>
+      <StickyFeatures
+        activeIdx={activeFeature}
+        setActive={setActiveFeature}
+        featureRefs={featureRefs}
+      />
+      <div className="squig wrap">· · · · · · · · · ·</div>
+      <HowItWorks
+        stepIdx={stepIdx}
+        setStep={setStepIdx}
+        stepRefs={stepRefs}
+      />
+      <div className="squig wrap">· · · · · · · · · ·</div>
+      <UseCases slide={slide} setSlide={setSlide} />
+      <div className="squig wrap">· · · · · · · · · ·</div>
+      <FaqSection openIdx={openFaq} setOpen={setOpenFaq} />
+      <CtaCard />
+      <SiteFooter />
+    </main>
   );
 };
