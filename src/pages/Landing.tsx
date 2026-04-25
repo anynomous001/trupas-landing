@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react';
-import { Kiosk } from '../components/landing/Kiosk';
 import { Dashboard } from '../components/landing/Dashboard';
 import type { DashView } from '../components/landing/Dashboard';
 
@@ -16,15 +15,41 @@ const FEATURES: { view: DashView; title: string; body: string }[] = [
   { view: 'ids',      title: 'Reads any ID, on any door.', body: '200+ document types, glare-tolerant, with manual override for the edge cases. Match rate stays above 99%.' },
   { view: 'sync',     title: 'Real-time sync, every site.', body: 'Every device heartbeats every 5 seconds. See exactly what is online, where, and how it has been performing.' },
   { view: 'audit',    title: 'An audit trail you can hand to a regulator.', body: 'Every read is logged with photo, timestamp, location and operator. Exportable. Tamper-evident. Quiet by default.' },
-  { view: 'alerts',   title: 'Alerts that are worth the ping.', body: 'Tamper, offline, repeat-flag, watchlist match. No noisy thresholds — only events you would have wanted woken for.' },
-  { view: 'team',     title: 'Roles and handoffs, no spreadsheet.', body: 'Permissions per location, shift handoffs, and a clear record of who was on the door when something happened.' },
 ];
 
 const STEPS = [
-  { state: 'idle'    as const, title: 'Plug it in.',     body: 'Mount, power, network. Out of the box to your first scan in under an hour.' },
-  { state: 'scan'    as const, title: 'They scan.',      body: 'Customer or visitor places ID in the frame. Kiosk reads, captures a photo, and starts verification.' },
-  { state: 'verify'  as const, title: 'You verify.',     body: 'Match against ID + face, check age and watchlist, surface any flags. Operator can override in the moment.' },
-  { state: 'success' as const, title: 'Everyone moves.', body: 'Logged, synced, audit-ready. Median time at the door: 2.1 seconds.' },
+  {
+    title: 'Plug it in.',
+    body: 'Mount, power, network. Out of the box to your first scan in under an hour.',
+    image: 'https://images.unsplash.com/photo-1759038086832-795644825e3a?auto=format&fit=crop&fm=jpg&q=80&w=2400',
+    imageAlt: 'Modern reception desk ready for guest check-in',
+    tag: '01 · Setup',
+    note: 'Desk-ready hardware with guided onboarding.',
+  },
+  {
+    title: 'They scan.',
+    body: 'Customer or visitor places ID in the frame. Kiosk reads, captures a photo, and starts verification.',
+    image: 'https://images.unsplash.com/photo-1576243165717-ce0a37f0ac8b?auto=format&fit=crop&fm=jpg&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&ixlib=rb-4.1.0&q=60&w=3000',
+    imageAlt: 'Passport presented for ID verification',
+    tag: '02 · Scan',
+    note: 'Reads passports and IDs with minimal operator help.',
+  },
+  {
+    title: 'You verify.',
+    body: 'Match against ID + face, check age and watchlist, surface any flags. Operator can override in the moment.',
+    image: 'https://images.unsplash.com/photo-1753108140127-afc3e215d75b?fm=jpg&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&ixlib=rb-4.1.0&q=60&w=3000',
+    imageAlt: 'Security camera device for monitoring and verification alerts',
+    tag: '03 · Verify',
+    note: 'Flags surface instantly before anyone walks through.',
+  },
+  {
+    title: 'Everyone moves.',
+    body: 'Logged, synced, audit-ready. Median time at the door: 2.1 seconds.',
+    image: 'https://images.unsplash.com/photo-1758448721205-8465cebc26af?auto=format&fit=crop&fm=jpg&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&ixlib=rb-4.1.0&q=80&w=2200',
+    imageAlt: 'Modern corporate reception area showing smooth visitor flow',
+    tag: '04 · Move',
+    note: 'Guests move forward while the audit trail closes behind them.',
+  },
 ];
 
 const SCENES = [
@@ -109,29 +134,25 @@ function Hero() {
     <section className="hero wrap">
       <div className="hero-image" aria-hidden="true" />
       <div className="hero-copy reveal is-visible">
-        <span className="eyebrow reveal-item delay-1">
-          <span className="dot" />
-          Hardware + software · v1 shipping now
-        </span>
-        <p className="hero-kicker reveal-item delay-2">Merchant identity infrastructure</p>
-        <h1 className="reveal-item delay-3">
+        <p className="hero-kicker reveal-item delay-1">Merchant identity infrastructure</p>
+        <h1 className="reveal-item delay-2">
           Built for<br />
           the <span className="accent-word">front</span> desk.
         </h1>
-        <p className="lede reveal-item delay-4">
+        <p className="lede reveal-item delay-3">
           A purpose-built kiosk and a dashboard that keeps every door honest. One place for kiosks,
           terminals, locations, and team members — calm enough to forget, sharp enough to catch what matters.
         </p>
-        <div className="ctas reveal-item delay-5">
+        <div className="ctas reveal-item delay-4">
           <a className="btn primary lg" href="/login">Get started <span className="ar">→</span></a>
           <a className="btn lg" href="#how">How it works</a>
         </div>
-        <div className="trust reveal-item delay-6">
+        <div className="trust reveal-item delay-5">
           <span className="pill">✓ no credit card</span>
           <span className="pill">✓ SOC 2 Type II</span>
           <span className="pill">✓ 24/7 monitoring</span>
         </div>
-        <div className="hero-proof-grid reveal-item delay-7">
+        <div className="hero-proof-grid reveal-item delay-6">
           {HERO_STATS.map((item) => (
             <div key={item.label} className="hero-proof-card">
               <div className="value">{item.value}</div>
@@ -148,7 +169,9 @@ function DeviceTour() {
   const cards = [
     {
       tag: 'ID reader',
-      visual: 'reader',
+      image: 'https://images.unsplash.com/photo-1576243165717-ce0a37f0ac8b?auto=format&fit=crop&fm=jpg&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&ixlib=rb-4.1.0&q=60&w=3000',
+      imageAlt: 'Person holding a passport for ID verification',
+      imageClass: 'passport',
       title: 'Reads any ID.',
       body: 'Driver licenses, passports, residency cards — front and back, glare-tolerant, NFC where the chip allows.',
       meta: ['200+ document types', '99.1% match rate'],
@@ -156,7 +179,9 @@ function DeviceTour() {
     },
     {
       tag: 'Offline mode',
-      visual: 'offline',
+      image: 'https://images.unsplash.com/photo-1695668548342-c0c1ad479aee?auto=format&fit=crop&fm=jpg&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&ixlib=rb-4.1.0&q=60&w=3000',
+      imageAlt: 'Server rack infrastructure representing offline sync and local buffering',
+      imageClass: 'server',
       title: 'Works offline.',
       body: 'Local cache + rolling re-sync. The lobby keeps working when the WAN does not. Reconciles in seconds when it returns.',
       meta: ['72h offline buffer', 'rolling re-sync'],
@@ -164,7 +189,9 @@ function DeviceTour() {
     },
     {
       tag: 'Tamper guard',
-      visual: 'tamper',
+      image: 'https://images.unsplash.com/photo-1753108140127-afc3e215d75b?fm=jpg&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&ixlib=rb-4.1.0&q=60&w=3000',
+      imageAlt: 'Security camera device representing tamper alerts and monitoring',
+      imageClass: 'camera',
       title: 'Locks down on tamper.',
       body: 'Anchored to the desk. Accelerometer + cover sensor. If it moves or opens, it shuts itself and pings you in under a second.',
       meta: ['<1s alert', 'cover + base sensor'],
@@ -183,15 +210,7 @@ function DeviceTour() {
         {cards.map((c) => (
           <div className={`tour-card reveal-item delay-${(cards.indexOf(c) % 3) + 1}`} key={c.tag}>
             <div className="shot">
-              <div className={`shot-visual ${c.visual}`}>
-                <div className="visual-panel" />
-                <div className="visual-beam" />
-                <div className="visual-bars">
-                  <span />
-                  <span />
-                  <span />
-                </div>
-              </div>
+              <img className={`shot-photo ${c.imageClass}`} src={c.image} alt={c.imageAlt} loading="lazy" />
               <span className="tag">{c.tag}</span>
             </div>
             <h3>{c.title}</h3>
@@ -225,7 +244,7 @@ function StickyFeatures({
       <div className="sec-h reveal-item">
         <span className="sec-num">03</span>
         <h2 className="sec-title">The dashboard that knows what's happening.</h2>
-        <span className="sec-sub">scroll · 6 features</span>
+        <span className="sec-sub">scroll · 4 features</span>
       </div>
       <div className="sticky-row">
         <div className="sticky-left reveal-item delay-1">
@@ -261,7 +280,7 @@ function HowItWorks({
   setStep: (i: number) => void;
   stepRefs: React.MutableRefObject<(HTMLDivElement | null)[]>;
 }) {
-  const currentState = STEPS[stepIdx]?.state ?? 'idle';
+  const currentStep = STEPS[stepIdx] ?? STEPS[0];
 
   return (
     <section id="how" className="wrap reveal">
@@ -272,7 +291,15 @@ function HowItWorks({
       </div>
       <div className="how-row">
         <div className="how-sticky reveal-item delay-1">
-          <Kiosk state={currentState} callouts={false} label="Trupas T1" />
+          <div className="how-media">
+            <img src={currentStep.image} alt={currentStep.imageAlt} className="how-media-img" loading="lazy" />
+            <div className="how-media-overlay" />
+            <div className="how-media-copy">
+              <div className="how-media-tag">{currentStep.tag}</div>
+              <strong>{currentStep.title}</strong>
+              <p>{currentStep.note}</p>
+            </div>
+          </div>
         </div>
         <div className="how-list">
           {STEPS.map((st, i) => (
