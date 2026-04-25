@@ -1,12 +1,8 @@
-import { RouterProvider } from 'react-router-dom';
-import { router } from './router';
+import { Landing } from './pages/Landing';
 import './styles/globals.css';
-import './stores/themeStore'; // Ensures store initializes early
 
-
-function App(): JSX.Element {
-  return <RouterProvider router={router} />;
+function App() {
+  return <Landing />;
 }
 
 export default App;
-

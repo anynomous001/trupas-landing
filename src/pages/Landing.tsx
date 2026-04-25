@@ -1,17 +1,15 @@
-import { Link } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
-import { ROUTES } from '../config/routes';
 
-export const Landing = (): JSX.Element => {
+export const Landing = (): React.JSX.Element => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <header className="border-b border-border">
         <div className="container mx-auto px-8 py-4 flex items-center justify-between">
           <h1 className="text-2xl font-bold text-text-primary">TruePas</h1>
-          <Link to={ROUTES.LOGIN}>
+          <a href="/login">
             <Button variant="outline">Sign In</Button>
-          </Link>
+          </a>
         </div>
       </header>
 
@@ -25,9 +23,9 @@ export const Landing = (): JSX.Element => {
             Manage your merchant account, locations, and team members with our secure and efficient portal.
           </p>
           <div className="flex gap-4 justify-center">
-            <Link to={ROUTES.LOGIN}>
+            <a href="/login">
               <Button size="lg">Sign In to Dashboard</Button>
-            </Link>
+            </a>
           </div>
         </div>
       </main>
@@ -41,4 +39,3 @@ export const Landing = (): JSX.Element => {
     </div>
   );
 };
-
