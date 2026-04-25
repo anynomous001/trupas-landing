@@ -1,0 +1,74 @@
+/* [next]/internal/font/google/oxygen_2b6a4ef6.module.css [app-client] (css) */
+@font-face {
+  font-family: Oxygen;
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url("../media/8e27202390448a44-s.ca735896.woff2") format("woff2");
+  unicode-range: U+100-2BA, U+2BD-2C5, U+2C7-2CC, U+2CE-2D7, U+2DD-2FF, U+304, U+308, U+329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: Oxygen;
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url("../media/a613c0ff7ec86511-s.p.6dfd5fb5.woff2") format("woff2");
+  unicode-range: U+??, U+131, U+152-153, U+2BB-2BC, U+2C6, U+2DA, U+2DC, U+304, U+308, U+329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: Oxygen;
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../media/9f10ef4b5f28fad8-s.c16bd674.woff2") format("woff2");
+  unicode-range: U+100-2BA, U+2BD-2C5, U+2C7-2CC, U+2CE-2D7, U+2DD-2FF, U+304, U+308, U+329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: Oxygen;
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../media/ad029b146f7e65ff-s.p.dedc2546.woff2") format("woff2");
+  unicode-range: U+??, U+131, U+152-153, U+2BB-2BC, U+2C6, U+2DA, U+2DC, U+304, U+308, U+329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: Oxygen;
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../media/f713f3800483e186-s.6e4434a7.woff2") format("woff2");
+  unicode-range: U+100-2BA, U+2BD-2C5, U+2C7-2CC, U+2CE-2D7, U+2DD-2FF, U+304, U+308, U+329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: Oxygen;
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../media/9f502796ecd51074-s.p.01cbdb25.woff2") format("woff2");
+  unicode-range: U+??, U+131, U+152-153, U+2BB-2BC, U+2C6, U+2DA, U+2DC, U+304, U+308, U+329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: Oxygen Fallback;
+  src: local(Arial);
+  ascent-override: 101.57%;
+  descent-override: 23.33%;
+  line-gap-override: 0.0%;
+  size-adjust: 101.1%;
+}
+
+.oxygen_2b6a4ef6-module__PL0z4a__className {
+  font-family: Oxygen, Oxygen Fallback;
+  font-style: normal;
+}
+
+.oxygen_2b6a4ef6-module__PL0z4a__variable {
+  --font-oxygen: "Oxygen", "Oxygen Fallback";
+}
+
+/*# sourceMappingURL=%5Bnext%5D_internal_font_google_oxygen_2b6a4ef6_module_css_bad6b30c._.single.css.map*/
